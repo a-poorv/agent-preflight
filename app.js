@@ -19,6 +19,7 @@ const App = (function() {
   let isExecuting = false;
   let currentAnalysis = null;
   let currentStepIndex = 0;
+  let lastSubmittedPrompt = '';
 
   function init() {
     renderQuickPrompts();
@@ -61,6 +62,7 @@ const App = (function() {
 
     DOM.welcomeView.style.display = 'none';
     DOM.chatView.style.display = 'block';
+    lastSubmittedPrompt = prompt;
     
     // Add loading state
     DOM.messagesArea.innerHTML = `<div style="padding: 40px; text-align: center; color: var(--text-muted);">
@@ -165,7 +167,7 @@ const App = (function() {
                     <h4 style="margin:0; font-size:15px; font-weight:700; color:var(--text-main);">Auto-create a reusable skill</h4>
                     <span style="font-size:9px; font-weight:700; color:var(--text-muted); background:#eee; padding:2px 6px; border-radius:4px; letter-spacing:0.5px;">SKILL</span>
                   </div>
-                  <button class="btn" style="padding:6px 16px; font-size:12px; font-weight:700; border:1px solid var(--accent-orange); color:var(--accent-orange); background:white; border-radius:8px; cursor:pointer;" onclick="App.saveSkill('${analysis.suggestedSkills[0].name}', '${analysis.suggestedSkills[0].pattern}', '${analysis.suggestedSkills[0].ref}')">
+                  <button class="btn" style="padding:6px 16px; font-size:12px; font-weight:700; border:1px solid var(--accent-orange); color:var(--accent-orange); background:white; border-radius:8px; cursor:pointer;" onclick="App.saveSkill(this, '${analysis.suggestedSkills[0].name.replace(/'/g, "\\'")}', '${analysis.suggestedSkills[0].pattern.replace(/'/g, "\\'")}', '${analysis.suggestedSkills[0].ref.replace(/'/g, "\\'")}')">
                     Save as /skill
                   </button>
                 </div>
@@ -404,19 +406,29 @@ const App = (function() {
     reset(prompt);
   }
 
-  function saveSkill(name, pattern, ref) {
+  async function saveSkill(btn, name, pattern, ref) {
     PreFlightEngine.saveNewSkill(name, pattern, ref);
-    const btn = event.target;
+    
     btn.innerHTML = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"></polyline></svg> Saved`;
     btn.style.background = 'var(--accent-green)';
     btn.style.color = 'white';
     btn.style.borderColor = 'var(--accent-green)';
     btn.disabled = true;
     
-    // Simulate re-analysis to show optimization
-    setTimeout(() => {
-        handleSubmit();
-    }, 800);
+    // Instant re-analysis using the stored prompt
+    setTimeout(async () => {
+        // Show loading state in the card area briefly
+        const card = document.querySelector('.preflight-card');
+        if (card) {
+            card.style.opacity = '0.5';
+            card.style.pointerEvents = 'none';
+        }
+        
+        currentAnalysis = await PreFlightEngine.analyze(lastSubmittedPrompt);
+        DOM.messagesArea.innerHTML = '';
+        renderPreFlightCard(currentAnalysis);
+        scrollToBottom();
+    }, 600);
   }
 
   function scrollToBottom() {
