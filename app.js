@@ -200,10 +200,13 @@
     html += `<div class="preflight-body">`;
 
     // Meta grid
+    const tokenLevel = complexity.estimatedTokens > 8000 ? 'High (> 8k)' : complexity.estimatedTokens > 3000 ? 'Medium (3k-8k)' : 'Low (< 3k)';
+    const tokenClass = complexity.estimatedTokens > 8000 ? 'risk-high' : complexity.estimatedTokens > 3000 ? 'risk-medium' : 'risk-low';
+
     html += `<div class="preflight-meta">
       <div class="meta-item"><div class="meta-label">TASK TYPE</div><div class="meta-value">${analysis.taskLabel}</div></div>
       <div class="meta-item"><div class="meta-label">COMPLEXITY</div><div class="meta-value">${capitalize(complexity.contextLoad)} (${complexity.stepCount} steps)</div></div>
-      <div class="meta-item"><div class="meta-label">EST. TOKENS</div><div class="meta-value">~${formatNumber(complexity.estimatedTokens)}</div></div>
+      <div class="meta-item"><div class="meta-label">TOKEN COST</div><div class="meta-value ${tokenClass}">${tokenLevel}</div></div>
       <div class="meta-item"><div class="meta-label">RISK LEVEL</div><div class="meta-value ${riskClass}">${capitalize(complexity.riskLevel)}</div></div>
     </div>`;
 
@@ -218,7 +221,7 @@
         <div class="step-info">
           <div class="step-action">${step.action}</div>
           <div class="step-meta">
-            <span>~${formatNumber(step.tokens)} tokens</span>
+            <span>Token Cost: ${step.tokens > 3000 ? 'High' : step.tokens > 1000 ? 'Medium' : 'Low'}</span>
             <span>Risk: ${capitalize(step.risk)}</span>
           </div>
         </div>
@@ -247,10 +250,13 @@
     }
 
     // Recommendation
+    const recIcon = recommendation.mode === 'skill' ? '🪄' : recommendation.mode === 'agent' ? '🤖' : '📝';
+    const recTitle = recommendation.mode === 'skill' ? '🪄 Skill / Workflow Recommended' : recommendation.mode === 'agent' ? '✅ Agent Mode Recommended' : '📝 Manual Mode Recommended';
+
     html += `<div class="recommendation-box ${recClass}">
-      <div class="recommendation-icon">${recommendation.mode === 'agent' ? '🤖' : '📝'}</div>
+      <div class="recommendation-icon">${recIcon}</div>
       <div class="recommendation-text">
-        <h3>${recommendation.mode === 'agent' ? '✅ Agent Mode Recommended' : '📝 Manual Mode Recommended'}</h3>
+        <h3>${recTitle}</h3>
         <p>${recommendation.reasoning}</p>
       </div>
     </div>`;

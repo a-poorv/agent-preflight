@@ -250,7 +250,7 @@ const PreFlightEngine = (() => {
   }
 
   // ===== 5. DECISION ENGINE =====
-  function recommend(taskClassification, complexity) {
+  function recommend(taskClassification, complexity, constraints) {
     const { type } = taskClassification;
     const { stepCount, riskLevel, ambiguity } = complexity;
 
@@ -269,11 +269,17 @@ const PreFlightEngine = (() => {
     if (stepCount <= 2) manualScore += 3;
     if (ambiguity > 70) manualScore += 2;
 
-    const mode = agentScore > manualScore ? 'agent' : 'manual';
-    const confidence = Math.min(0.97, 0.6 + Math.abs(agentScore - manualScore) * 0.05);
+    let mode = agentScore > manualScore ? 'agent' : 'manual';
+    let confidence = Math.min(0.97, 0.6 + Math.abs(agentScore - manualScore) * 0.05);
+
+    const hasBoundaries = constraints && constraints.some(c => c.type === 'boundary');
 
     let reasoning;
-    if (mode === 'agent') {
+    if (hasBoundaries) {
+      mode = 'skill';
+      confidence = 0.95;
+      reasoning = `You have defined deterministic boundaries in your prompt. Instead of relying on an exploratory Agent, it is highly recommended to save this context as a <strong>Skill</strong> or <strong>Workflow Template</strong> to guarantee consistent, token-efficient execution.`;
+    } else if (mode === 'agent') {
       reasoning = `This is a ${complexity.stepCount}-step ${taskClassification.label.toLowerCase()} task. An agent can handle the complexity while keeping you in control at checkpoints.`;
     } else {
       reasoning = `This looks like a straightforward ${taskClassification.label.toLowerCase()} task. Manual prompting will give you more direct control and faster results.`;
@@ -354,7 +360,7 @@ const PreFlightEngine = (() => {
     const complexity = estimateComplexity(prompt, taskClassification.type);
     const constraints = extractConstraints(prompt);
     const executionPlan = buildExecutionPlan(taskClassification.type, complexity, constraints);
-    const recommendation = recommend(taskClassification, complexity);
+    const recommendation = recommend(taskClassification, complexity, constraints);
     const pattern = LearningLayer.detectPattern({
       taskType: taskClassification.type,
       taskLabel: taskClassification.label
