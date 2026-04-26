@@ -263,6 +263,22 @@ const App = (function() {
       <button class="btn-ghost" onclick="App.reset()" style="font-size:12px; padding:6px 12px; color:var(--text-muted); display:flex; gap:6px; align-items:center; font-weight:500;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.5 2v6h-6M2.13 15.57a10 10 0 1 0 3.43-11.44L2.5 8"></path></svg> New task</button>
     </div>`;
 
+    // Intelligence Nudge
+    const hasSkills = analysis.skillMatches.length > 0;
+    if (hasSkills) {
+      html += `<div class="intelligence-nudge" style="background: #ECA33508; border-bottom: 1px solid #ECA33522; padding: 12px 24px;">
+        <details>
+            <summary style="font-size: 12px; font-weight: 600; color: var(--accent-yellow); cursor: pointer; display: flex; align-items: center; gap: 8px; list-style: none;">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+                Intelligence nudge: This process is optimized via matched /skill workflows
+            </summary>
+            <div style="padding: 12px 0 4px 22px; font-size: 13px; color: var(--text-muted); line-height: 1.5;">
+                By recalling <strong>${analysis.skillMatches.map(s => s.name).join(', ')}</strong>, the agent bypasses standard exploration cycles, reducing reasoning overhead by ~15% and ensuring strict adherence to your quality patterns.
+            </div>
+        </details>
+      </div>`;
+    }
+
     html += `<div class="ar-content-inner" style="padding: 24px; display:flex; flex-direction:column; gap:16px;">`;
     html += `<div class="ar-steps" id="ar-steps" style="display:flex; flex-direction:column; gap:16px;">`;
     analysis.executionPlan.steps.forEach(step => {

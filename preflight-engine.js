@@ -15,9 +15,9 @@ const PreFlightEngine = (function() {
     { regex: /keep\s+(.+?)\s+(unchanged|intact|as is)/gi, type: 'explicit' },
     { regex: /preserve\s+(.+)/gi, type: 'boundary' },
     { regex: /without\s+(breaking|changing|modifying)\s+(.+)/gi, type: 'boundary' },
-    { regex: /don'?t\s+(make|change|modify)/gi, type: 'boundary' },
+    { regex: /don't\s+break\s+(.+)/gi, type: 'boundary' },
     { regex: /no\s+(code\s+changes|modifications)/gi, type: 'boundary' },
-    { regex: /make sure\s+(.+)/gi, type: 'explicit' },
+    { regex: /propose\s+(multiple|optimized|few|2-3|several)\s+(solutions|options)/gi, type: 'explicit' },
     { regex: /must\s+(not|remain|stay|keep)\s+(.+)/gi, type: 'explicit' },
     { regex: /no\s+(new dependencies|external|third.party)/gi, type: 'explicit' }
   ];
@@ -268,11 +268,12 @@ const PreFlightEngine = (function() {
         // Identify potential NEW skills from constraints or boundaries
         const suggestedSkills = [];
         constraints.forEach(c => {
-            if (c.type === 'boundary' || c.type === 'explicit') {
+            if (c.type === 'boundary' || (c.type === 'explicit' && c.rule.length > 10)) {
+                const label = c.rule.length > 20 ? c.rule.substring(0, 17) + '...' : c.rule;
                 suggestedSkills.push({
-                    name: `Auto-create skill: "${c.rule}"`,
+                    name: `Workflow optimization: "${label}"`,
                     pattern: c.rule,
-                    ref: `/${c.rule.toLowerCase().replace(/\s+/g, '-')}.md`
+                    ref: `/${c.rule.toLowerCase().replace(/[^a-z0-9]+/g, '-')}.md`
                 });
             }
         });
