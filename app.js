@@ -171,7 +171,7 @@ const App = (function() {
                 </div>
                 <p style="margin:0 0 12px 0; font-size:14px; font-weight:500; color:var(--text-main); font-family:var(--font-sans);">"${analysis.suggestedSkills[0].pattern}"</p>
                 <div style="padding:12px; background:white; border-radius:12px; border:1px solid rgba(0,0,0,0.05); font-size:13px; line-height:1.5;">
-                  <span style="font-weight:700; color:var(--text-main);">Why this recommendation:</span> You've set a specific rule or pattern. Saving this as a reusable skill guarantees the agent follows it in the future, while optimizing token usage and improving response quality.
+                  <span style="font-weight:700; color:var(--text-main);">Contextual insight:</span> You've set a specific rule or pattern. Converting this into a deterministic workflow ensures the agent follows it natively while significantly reducing reasoning overhead.
                 </div>
               </div>
             </div>
@@ -225,7 +225,7 @@ const App = (function() {
         </div>`;
 
       html += `<div class="pf-reasoning" style="margin-top:20px; padding:16px; background:#F5F2EA; border-radius:12px; font-size:14px; color:var(--text-main); border:1px solid rgba(0,0,0,0.05);">
-        <span style="font-weight:700;">Why this recommendation:</span> ${analysis.recommendation.reasoning}
+        <span style="font-weight:700;">Strategic Analysis:</span> ${analysis.recommendation.reasoning}
       </div>`;
     }
 

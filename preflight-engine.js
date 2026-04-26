@@ -192,9 +192,9 @@ const PreFlightEngine = (function() {
         quality: 95,
         latency: hasContext ? 30 : 45,
         bullets: hasContext ? [
-          "Eliminate decision blind spots using Skill Bank",
-          "Recall existing patterns via /skill references",
-          "Prioritize correctness over speed",
+          "Minimize reasoning overhead using /skill workflows",
+          "Recall existing implementation patterns",
+          "Prioritize execution integrity over speed",
           "Automated boundary verification"
         ] : [
           "Full exploration loop required",
@@ -298,16 +298,16 @@ const PreFlightEngine = (function() {
         let reasoning = llmResult?.reasoning || '';
         if (!reasoning) {
             if (optimizationProfile.mode === 'agent') {
-                reasoning = "High cognitive load detected. Delegating to an agent loop reduces your manual overhead by 80%.";
-                if (skillMatches.length > 0) reasoning += " Verified matching skills in your local bank, further reducing decision risk.";
-                if (suggestedSkills.length > 0) reasoning += " I've identified a prompting pattern that could be optimized into a reusable skill.";
+                reasoning = "High cognitive load detected. Delegating to an agent loop reduces manual overhead by 80%.";
+                if (skillMatches.length > 0) reasoning += " Applying matched /skill workflows to optimize accuracy and reduce reasoning overhead.";
+                if (suggestedSkills.length > 0) reasoning += " Identified an operational pattern that can be converted into a deterministic workflow.";
             } else {
-                reasoning = "Predictable task. Direct execution avoids unnecessary agentic 'hallucination' and saves tokens.";
+                reasoning = "Predictable task. Direct execution ensures immediate delivery while avoiding unnecessary reasoning overhead.";
             }
         }
 
         if (contextTriggers.length > 0 && !llmResult) {
-          reasoning += ` I've identified context references that eliminate 'decision blind spots' regarding existing code.`;
+          reasoning += ` Identified context references that eliminate blind spots regarding existing implementation patterns.`;
         }
 
         return {
