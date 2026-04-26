@@ -142,8 +142,8 @@ const App = (function() {
 
     if (constraints.length > 0) {
       html += `<div class="pf-section" style="border-bottom: none; padding-bottom: 12px;">
-        <div class="pf-section-title">DETERMINISM BOUNDARIES</div>
-        <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 12px;">Techniques I'll apply to make a non-deterministic agent behave predictably.</div>`;
+        <div class="pf-section-title">EXECUTION GUARDRAILS</div>
+        <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 12px;">Strict rules I will follow to keep this agent on track.</div>`;
       
       constraints.forEach(c => {
         if (c.type === 'boundary') {
@@ -159,7 +159,7 @@ const App = (function() {
               </button>
             </div>
             <div style="font-size: 13px; color: var(--text-muted); background: white; padding: 10px 12px; border-radius: 8px; width: 100%; border: 1px solid var(--border-light);">
-              <strong style="color: var(--text-main);">Why this recommendation:</strong> You have defined deterministic boundaries in your prompt. I will package this constraint as a saved skill so future runs apply it deterministically — no re-derivation.
+              <strong style="color: var(--text-main);">Why this recommendation:</strong> You've set a strict rule. Saving this as a reusable skill guarantees the agent follows it in the future, while optimizing token usage and improving response quality.
             </div>
           </div>`;
         } else {
@@ -210,20 +210,25 @@ const App = (function() {
 
       if (optimizationProfile.mode === 'skill') {
         html += `<div style="margin-top:24px;">
-          <div class="pf-section-title">DETERMINISM BOUNDARIES</div>
-          <div style="font-size:13px; color:var(--text-muted); margin-bottom:12px;">Techniques I'll apply to make a non-deterministic agent behave predictably.</div>
+          <div class="pf-section-title">EXECUTION GUARDRAILS</div>
+          <div style="font-size:13px; color:var(--text-muted); margin-bottom:12px;">Strict rules I will follow to keep this agent on track.</div>
           
-          <div style="border:1px solid var(--border-light); border-radius:var(--radius-md); padding:16px; display:flex; gap:16px; background:#fff;">
+          <div style="border:1px solid var(--border-light); border-radius:var(--radius-md); padding:16px; display:flex; gap:16px; background:#fff; align-items: flex-start;">
             <div style="width:32px; height:32px; background:var(--accent-orange); color:#fff; border-radius:50%; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 2 7 12 12 22 7 12 2"></polygon><polyline points="2 17 12 22 22 17"></polyline><polyline points="2 12 12 17 22 12"></polyline></svg>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
             </div>
-            <div>
-              <div style="display:flex; align-items:center; gap:8px; margin-bottom:8px;">
-                <h4 style="font-size:14px; margin:0;">Auto-create a reusable skill</h4>
-                <span style="font-size:9px; font-weight:700; background:#F3F1EB; padding:2px 6px; border-radius:4px; border:1px solid #EBE8E0;">SKILL</span>
+            <div style="flex: 1;">
+              <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:8px;">
+                <div style="display:flex; align-items:center; gap:8px;">
+                  <h4 style="font-size:14px; margin:0;">Auto-create a reusable skill</h4>
+                  <span style="font-size:9px; font-weight:700; background:#F3F1EB; padding:2px 6px; border-radius:4px; border:1px solid #EBE8E0;">SKILL</span>
+                </div>
+                <button style="background: white; border: 1px solid var(--accent-orange); color: var(--accent-orange); padding: 4px 10px; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 11px; white-space: nowrap;">
+                  Save as /skill
+                </button>
               </div>
               <div style="font-size:10px; font-weight:700; color:var(--accent-green); background:rgba(61,139,99,0.1); display:inline-block; padding:2px 6px; border-radius:4px; margin-bottom:8px; letter-spacing:0.5px;">AUTO-CREATE</div>
-              <p style="font-size:12px; color:var(--text-muted); line-height:1.5;">I'll package the optimization rule as a saved skill so future runs apply it deterministically — no re-derivation.</p>
+              <p style="font-size:12px; color:var(--text-muted); line-height:1.5; margin: 0 0 12px 0;">Saving this as a reusable skill guarantees the agent follows it in the future, while optimizing token usage and improving response quality.</p>
             </div>
           </div>
         </div>`;
@@ -312,10 +317,13 @@ const App = (function() {
     isExecuting = true;
     currentStepIndex = 0;
     
-    const container = document.querySelector('.preflight-card').parentNode;
-    container.innerHTML = renderAgentRunningCard(currentAnalysis, 'running');
-    scrollToBottom();
+    // Find only the card and replace it, keeping the prompt bubble above it
+    const card = document.querySelector('.preflight-card');
+    if (card) {
+      card.outerHTML = renderAgentRunningCard(currentAnalysis, 'running');
+    }
     
+    scrollToBottom();
     simulateExecution();
   }
 
@@ -325,8 +333,10 @@ const App = (function() {
     function processStep() {
         if (currentStepIndex >= steps.length) {
             isExecuting = false;
-            const container = document.querySelector('.agent-running-card').parentNode;
-            container.innerHTML = renderAgentRunningCard(currentAnalysis, 'complete');
+            const card = document.querySelector('.agent-running-card');
+            if (card) {
+                card.outerHTML = renderAgentRunningCard(currentAnalysis, 'complete');
+            }
             scrollToBottom();
             return;
         }
