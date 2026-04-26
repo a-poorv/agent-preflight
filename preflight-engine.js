@@ -2,7 +2,7 @@ const PreFlightEngine = (function() {
 
   const TASK_PATTERNS = {
     debugging: { keywords: ['debug','fix','error','bug','issue','exception','crash'], label: 'Debugging', icon: '🐛', color: '#D96C51' },
-    code_gen: { keywords: ['build','create','write','generate','make','develop'], label: 'Generation', icon: '✨', color: '#ECA335' },
+    code_gen: { keywords: ['build','create','write','generate','make','develop','design','layout','ui','page','component'], label: 'Generation', icon: '✨', color: '#ECA335' },
     refactor: { keywords: ['refactor','restructure','clean up','optimize','rewrite'], label: 'Refactoring', icon: '♻️', color: '#3D8B63' },
     analysis: { keywords: ['explain','understand','how does','what is','read','analyze'], label: 'Analysis', icon: '🔍', color: '#6B6863' },
     research: { keywords: ['research','compare','evaluate','find','search'], label: 'Research', icon: '📚', color: '#5B76A6' },
@@ -20,6 +20,11 @@ const PreFlightEngine = (function() {
     { regex: /make sure\s+(.+)/gi, type: 'explicit' },
     { regex: /must\s+(not|remain|stay|keep)\s+(.+)/gi, type: 'explicit' },
     { regex: /no\s+(new dependencies|external|third.party)/gi, type: 'explicit' }
+  ];
+
+  const CONTEXT_PATTERNS = [
+    { regex: /(?:existing|previous|last|earlier|used in|same as)\s+(?:code|layout|design|page|logic|style|home page)/gi, type: 'recall' },
+    { regex: /(?:follow|use|refer to)\s+(?:the|existing|our)\s+(?:standard|pattern|style)/gi, type: 'pattern' }
   ];
 
   const STEP_TEMPLATES = {
@@ -140,23 +145,29 @@ const PreFlightEngine = (function() {
     return { steps, totalSteps: steps.length };
   }
 
-  function getOptimizationProfile(constraints, riskLevel, taskType) {
-    const isHighRiskOrMultiStep = riskLevel === 'high' || taskType === 'multi_step';
+  function getOptimizationProfile(constraints, riskLevel, taskType, contextTriggers = []) {
+    const isHighRiskOrMultiStep = riskLevel === 'high' || taskType === 'multi_step' || taskType === 'code_gen';
+    const hasContext = contextTriggers.length > 0;
     
     if (isHighRiskOrMultiStep) {
       return {
-        description: "Multi-step or high-stakes work — I'll trade tokens & time for correctness.",
-        tokens: 35,
+        description: hasContext ? "Multi-step design task with context detected. I'll prioritize correctness while recalling your existing patterns." : "Multi-step or high-stakes work — I'll trade tokens & time for correctness.",
+        tokens: hasContext ? 25 : 35,
         quality: 95,
-        latency: 40,
-        bullets: [
+        latency: hasContext ? 30 : 40,
+        bullets: hasContext ? [
+          "Reference identified context to reduce re-derivation",
+          "Apply existing patterns via Workflow/Skill recall",
+          "Self-verify against target design",
+          "Ask for missing file references before starting"
+        ] : [
           "Read full context before editing",
           "Self-verify with build / tests after each change",
           "Generate multiple candidate solutions, pick the best",
           "Pause at checkpoints for your review"
         ],
         mode: "agent",
-        profileType: "quality"
+        profileType: hasContext ? "balanced" : "quality"
       };
     } else if (taskType === 'simple_qa') {
       return {
@@ -194,13 +205,26 @@ const PreFlightEngine = (function() {
     const constraints = extractConstraints(prompt);
     const executionPlan = buildExecutionPlan(taskClassification.type, complexity);
     
-    const optimizationProfile = getOptimizationProfile(constraints, complexity.riskLevel, taskClassification.type);
+    const contextTriggers = [];
+    CONTEXT_PATTERNS.forEach(p => {
+      const matches = prompt.matchAll(p.regex);
+      for (const match of matches) {
+        contextTriggers.push({ type: p.type, rule: match[0] });
+      }
+    });
+
+    const optimizationProfile = getOptimizationProfile(constraints, complexity.riskLevel, taskClassification.type, contextTriggers);
 
     let confidence = taskClassification.confidence;
+    if (contextTriggers.length > 0) confidence = Math.min(0.99, confidence + 0.1);
 
     let reasoning = '';
     if (optimizationProfile.mode === 'agent') reasoning = "Iterative coding tasks suit an agent loop with verification.";
     else reasoning = "Direct querying is best for simple knowledge retrieval.";
+
+    if (contextTriggers.length > 0) {
+      reasoning += ` I've also detected a reference to existing context (${contextTriggers[0].rule}), which allows for token-efficient recall via skills.`;
+    }
 
     return {
       id: 'pf_' + Date.now(),
@@ -210,6 +234,7 @@ const PreFlightEngine = (function() {
       taskIcon: taskClassification.icon,
       complexity,
       constraints,
+      contextTriggers,
       executionPlan,
       optimizationProfile,
       recommendation: {

@@ -144,6 +144,22 @@ const App = (function() {
       html += `<div class="pf-section" style="border-bottom: none; padding-bottom: 12px;">
         <div class="pf-section-title">EXECUTION GUARDRAILS</div>
         <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 12px;">Strict rules I will follow to keep this agent on track.</div>`;
+
+      if (analysis.contextTriggers && analysis.contextTriggers.length > 0) {
+        analysis.contextTriggers.forEach(t => {
+          html += `<div style="background: rgba(91, 118, 166, 0.05); border: 1px solid rgba(91, 118, 166, 0.2); padding: 14px; border-radius: 12px; margin-bottom: 12px; display: flex; gap: 12px; align-items: flex-start;">
+            <div style="width: 24px; height: 24px; background: #5B76A6; color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 12px;">🔗</div>
+            <div style="flex: 1;">
+              <div style="font-weight: 600; font-size: 13px; color: var(--text-main);">Context link identified: "${t.rule}"</div>
+              <div style="font-size: 12px; color: var(--text-muted); margin-top: 4px;">Detected reference to existing work. Should I recall a specific Skill or ask for the file path before starting?</div>
+              <div style="display: flex; gap: 8px; margin-top: 10px;">
+                <button class="btn" style="padding: 4px 10px; font-size: 11px; background: white; border: 1px solid #5B76A6; color: #5B76A6;">Recall /skill</button>
+                <button class="btn" style="padding: 4px 10px; font-size: 11px; background: white; border: 1px solid var(--border-light); color: var(--text-muted);">Ask for files</button>
+              </div>
+            </div>
+          </div>`;
+        });
+      }
       
       constraints.forEach(c => {
         if (c.type === 'boundary') {
