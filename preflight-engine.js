@@ -80,7 +80,7 @@ const PreFlightEngine = (function() {
       label: pattern.label,
       icon: pattern.icon,
       color: pattern.color,
-      confidence: Math.min(0.95, 0.4 + (bestScore * 0.15))
+      confidence: Math.min(0.98, 0.85 + (bestScore * 0.05))
     };
   }
 
