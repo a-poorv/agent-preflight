@@ -240,7 +240,7 @@ const PreFlightEngine = (function() {
     }
   }
 
-  async function analyze(prompt, history = []) {
+  async function analyze(prompt, history = [], ignoredSkills = []) {
     try {
         // Attempt live LLM analysis if API key exists - with strict timeout
         let llmResult = null;
@@ -282,7 +282,10 @@ const PreFlightEngine = (function() {
           }
         });
 
-        const skillMatches = LOCAL_SKILL_BANK.filter(s => new RegExp(s.pattern, 'i').test(prompt));
+        // Filter skill bank to exclude ignored skills
+        const activeSkillBank = LOCAL_SKILL_BANK.filter(s => !ignoredSkills.includes(s.ref));
+        
+        const skillMatches = activeSkillBank.filter(s => new RegExp(s.pattern, 'i').test(prompt));
         
         // Identify potential NEW skills (Heuristic + LLM candidate)
         const suggestedSkills = [];

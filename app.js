@@ -21,6 +21,7 @@ const App = (function() {
   let currentStepIndex = 0;
   let lastSubmittedPrompt = '';
   let acceptedSkills = new Set();
+  let ignoredSkills = new Set();
 
   function init() {
     renderQuickPrompts();
@@ -489,12 +490,21 @@ const App = (function() {
     }, 600);
   }
 
-  function discardSkill(ref) {
+  async function discardSkill(ref) {
     if (!currentAnalysis) return;
-    // For this prototype, we'll just re-analyze with a flag or just skip the match in the engine
-    // Real implementation would have a transient 'ignored_skills' list
-    alert(`Ignoring ${ref} for this task. Re-optimizing...`);
-    reset(lastSubmittedPrompt);
+    
+    ignoredSkills.add(ref);
+    
+    // Show loading state briefly
+    const card = document.querySelector('.preflight-card');
+    if (card) { card.style.opacity = '0.5'; }
+    
+    // Re-analyze with ignored skills
+    currentAnalysis = await PreFlightEngine.analyze(lastSubmittedPrompt, [], Array.from(ignoredSkills));
+    
+    DOM.messagesArea.innerHTML = '';
+    renderPreFlightCard(currentAnalysis);
+    scrollToBottom();
   }
 
   function editSkill(ref) {
