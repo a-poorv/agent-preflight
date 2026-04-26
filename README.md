@@ -14,7 +14,42 @@ As Claude evolves beyond simple prompting, users can now perform complex tasks t
 - They **waste tokens** through trial-and-error
 - They **fail to adopt** advanced capabilities despite their potential
 
-**Result:** Low agent adoption (~20%), high failure rate (~35%), and 3.2 retries per task on average.
+**The "Adoption Gap":** As Claude moves from a chatbot to an agent, users face a massive **Cognitive Burden**. They have to decide *if* they trust an agent with their codebase, *how* much it will cost, and *where* it might go wrong.
+
+**Result:** Users stay in "Manual Mode" (~80% of the time), high failure rate (~35%), and 3.2 retries per task on average due to unpredictable execution.
+
+---
+
+## 🗺️ Capability Discovery: From "Chat User" to "AI Architect"
+
+The core problem in Claude's agentic adoption is the **Discovery Gap**. Users treat Claude like a simple Q&A bot because they don't know it can be a **Project Manager**. Pre-Flight solves this through:
+
+1.  **Just-in-Time Exposure:** When a user enters a prompt, Pre-Flight exposes the hidden "Agentic Engine." It shows them a multi-phase plan (Research, Architecture, Implementation) they didn't know Claude could execute.
+2.  **The Heuristics of Delegation:** By recommending "Agent" vs "Manual" modes, the system teaches the user the "Mental Model" of an expert. It guides them to delegate complex work while staying manual for simple tasks.
+3.  **Pattern Graduation:** The system "catches" users writing effective prompts and suggests converting them into **Deterministic Skills**. This guides the user to stop "talking to AI" and start **"building with AI."**
+
+---
+
+## 💎 The Strategic Value: Solving the "Decision Blind Spot"
+
+This solution isn't just a UI card; it's a **Cognitive Bridge** between simple prompting and complex agentic work. It addresses the three main reasons users fail to adopt agents:
+
+### 1. Predictability vs. "Black Box" Anxiety
+*   **The Problem:** Hit "Enter" and hope for the best.
+*   **The Solution:** Pre-Flight exposes the **Execution Plan** before a single token is spent. 
+*   **User Guidance:** The user can see exactly where the agent will "Hypothesize," "Apply," or "Review," allowing them to add checkpoints where they feel most anxious.
+
+### 2. Operational Efficiency (The Token Loop)
+*   **The Problem:** Users repeatedly prompt for the same quality standards (e.g., "use clean code," "3 solutions").
+*   **The Solution:** The system **Auto-Detects Habits** and suggests converting them into **Persistent Skills**.
+*   **User Guidance:** It guides the user from being a "Prompt Writer" to being an "Operations Manager," saving ~30% in token costs through deterministic templates.
+
+### 3. High-Stakes Confidence
+*   **The Problem:** Agents modifying critical files without explicit "mental alignment" with the user.
+*   **The Solution:** **Context-Aware Guardrails** that distinguish between "Reading" and "Writing."
+*   **User Guidance:** It guides the user to set boundaries (e.g., "don't touch tests") *before* the agent starts, turning a high-risk task into a high-confidence one.
+
+**Bottom Line:** Pre-Flight turns the Claude Agent from a "dynamic gambler" into a **"predictable professional."** It solves the Adoption Gap by providing the **informed decision-making** layer that is currently missing from agentic UX.
 
 ---
 
@@ -26,64 +61,58 @@ Before any agent executes, the system **analyzes the user's prompt** and present
 
 ```
 User Prompt → Task Classifier → Complexity Estimator → Constraint Extractor
-                                                              ↓
+                                                               ↓
                     Execution Preview ← Decision Engine ← Execution Planner
-                           ↓
+                                                               ↓
            [▶ Proceed]  [✏️ Modify]  [📝 Manual Mode]
 ```
 
-### Core Innovation
-
-The **Pre-Flight Card** turns the "black box" of agentic execution into a transparent, controllable process:
-
-| Before Pre-Flight | After Pre-Flight |
-|---|---|
-| "I hope this agent does what I want" | "I can see exactly what it will do" |
-| No idea about token cost | Token budget shown upfront |
-| Agent runs unchecked | Checkpoints pause for user review |
-| Trial-and-error | Informed decision-making |
-
-### The Token Optimization Loop: Agent vs. Workflow
-
-A key PM challenge in agent adoption is **token efficiency and execution determinism**. The Pre-Flight system introduces a clear paradigm to solve this:
-
-1. **Agent Execution (Exploratory):** High autonomy, high token usage. Best for net-new problems where Claude must dynamically plan and reason through steps (e.g., "Fix this unknown bug").
-2. **Workflow Execution (Deterministic):** Low token usage, high reliability. Once a task is solved repeatedly (e.g., "Review PR for security"), the dynamic planning phase becomes redundant.
-3. **The Value Proposition:** The system acts as a "Token Optimization Loop." It detects when an Agent is repeatedly solving similar tasks and suggests converting the successful execution plan into a **Workflow Template**. This bypasses the expensive reasoning/planning phase, saving ~40% in token costs, and ensures the exact same tools and constraints are reliably applied every time.
-
 ---
 
-## 🏗️ Architecture
+## 🏛️ System Architecture & Logic (PPT Reference)
 
-### Core Components
+*Use the content below for reviewer presentations and system walkthroughs.*
 
-1. **Task Classifier** — Categorizes user intent (debugging, code gen, analysis, refactor, research, multi_step, Q&A).
-2. **Complexity Estimator** — Scores step count, context load, risk level, and token budget.
-3. **Dynamic Intent Extractor** — Analyzes the prompt for complex operational boundaries and rules to identify "Skill Candidates."
-4. **Functional Skill Bank** — A persistent repository (localStorage) of `/skill.md` templates that reduce reasoning overhead.
-5. **Execution Planner** — Generates a step-by-step plan with visual "Skill Badges" and checkpoints.
-6. **In-Line Optimization Loop** — A real-time feedback system that re-calculates the "Optimization Profile" instantly when a skill is saved or recalled.
-7. **Decision Engine** — Resolves the "Decision Blind Spot" by providing an honest preview of risk, cost, and efficiency.
+### 1. Architectural Flow Diagram
 
-### System Flow
-
+```mermaid
+graph TD
+    A[User Input / Prompt] --> B{Dynamic Intent Extractor}
+    B -->|Intent identified| C[Complexity & Risk Engine]
+    B -->|Habit detected| D[Pattern Recognition Layer]
+    
+    C --> E[Context Link Matcher]
+    D -->|Suggestion| F[Skill Bank /localStorage]
+    
+    E --> G[Pre-Flight Analysis Card]
+    F -->|Recall /skill.md| G
+    
+    G --> H{Decision Node}
+    H -->|Proceed| I[Agentic Execution w/ Checkpoints]
+    H -->|Modify| J[Prompt Refinement Loop]
+    H -->|Manual| K[Standard Chat Session]
+    
+    I -->|Successful Plan| L[Auto-Suggest Reusable Skill]
+    L --> F
 ```
-┌─────────────┐     ┌─────────────────┐     ┌──────────────────┐
-│ User enters │ ──→ │  Pre-Flight     │ ──→ │  Execution       │
-│ prompt      │     │  Analysis       │     │  Preview Card    │
-└─────────────┘     └─────────────────┘     └──────────────────┘
-                                                     │
-                                          ┌──────────┼──────────┐
-                                          ▼          ▼          ▼
-                                     [Proceed]  [Modify]  [Manual]
-                                          │
-                                          ▼
-                                    ┌──────────────┐
-                                    │ Step-by-Step │
-                                    │ Execution    │
-                                    │ w/ Checkpoints│
-                                    └──────────────┘
-```
+
+### 2. Key Logic Breakdown
+
+| Logic Area | Change / Requirement | Technical Necessity |
+| :--- | :--- | :--- |
+| **Shadow Intent Detection** | LLM/Heuristic scans for operational habits (e.g., "coding standards", "3 solutions"). | Ensures proactive optimization without requiring the user to manually tag their own patterns. |
+| **Skill Bank Persistence** | Context-aware matching of prompt fragments against a local repository of `/skill.md` templates. | Eliminates "Decision Blind Spots" by recalling verified patterns, reducing reasoning overhead. |
+| **Contextual Guardrails** | Automated differentiation between "Modification" (High Risk) and "Analysis" (Low Risk) tasks. | Directly addresses the "Black Box" fear by setting explicit, user-approved execution boundaries. |
+| **In-Line Optimization** | Real-time recalculation of Token, Quality, and Latency bars based on Skill injection. | Provides immediate "System Proof" of efficiency gains, encouraging long-term agent adoption. |
+
+### 3. Features & Strategic Benefits
+
+| Key Feature | User Benefit | Impact on UX |
+| :--- | :--- | :--- |
+| **Pre-Flight Preview** | **Transparency:** Preview the agent's exact plan before any tokens are spent. | **Reduces Anxiety:** Turns a "black box" into a controlled environment. |
+| **Auto-Skill Suggestion** | **Token Efficiency:** Convert recurring instructions into persistent `/skill` files. | **Lowers Friction:** Optimizes the Token/Quality ratio for repetitive tasks. |
+| **Execution Checkpoints** | **Control:** Human-in-the-loop pauses for critical file modifications. | **Maintains Trust:** Prevents accidental destructive operations. |
+| **Bifurcated Mode** | **Informed Decision:** Clear recommendation between "Agent" and "Manual" modes. | **Increases ROI:** Directs tokens toward complex tasks where they add the most value. |
 
 ---
 
@@ -95,91 +124,17 @@ A key PM challenge in agent adoption is **token efficiency and execution determi
 
 ### What to Try
 
-1. **Click any quick prompt pill** — e.g., "Debug auth flow" or "Build REST API"
-2. **Review the Pre-Flight Card** — See task type, complexity, token estimate, and execution plan
-3. **Click "Proceed with Agent"** — Watch the step-by-step execution with real-time progress
-4. **Hit a checkpoint** — Agent pauses for your review before critical steps
-5. **Try "Quick question"** — Notice it recommends Manual Mode instead of Agent Mode
-6. **Try "Modify Plan"** — Add constraints like "Don't modify test files"
+1. **Click any quick prompt pill** — e.g., "Refactor the dashboard..."
+2. **Review the Pre-Flight Card** — Note the integrated "Auto-create skill" recommendation within the guardrails.
+3. **Click "Save as /skill"** — Watch the system re-analyze and shift to a "Skill-optimized" profile.
+4. **Hit "Proceed with Agent"** — Watch the execution steps with integrated `/skill.md` references.
 
 ---
 
-## 📊 Target Metrics
-
-| Metric | Baseline | Target | How Pre-Flight Helps |
-|--------|----------|--------|---------------------|
-| Agent adoption rate | ~20% | 60%+ | Reduces fear of the unknown |
-| Failed agent runs | ~35% | <10% | Better task-mode matching |
-| User retries/task | 3.2 avg | <1.5 | Right approach on first try |
-| Task completion rate | 55% | 85%+ | Transparent execution with control |
-| Time to first agent use | 15 min | <3 min | Guided onboarding via Pre-Flight |
-
----
-
-## 🔮 Future Roadmap
-
-| Phase | Feature | Impact |
-|-------|---------|--------|
-| **v0.2** | Real Claude API integration | Live task analysis |
-| **v0.3** | Team workflow library | Shared best practices |
-| **v0.4** | Cost forecasting with historical data | Budget optimization |
-| **v0.5** | A/B test: Pre-Flight ON vs OFF | Validate adoption lift |
-
----
-
-## 🧩 Build Phases
-
-| Phase | Scope | Status |
-|-------|-------|--------|
-| Phase 1 | Claude-Code-style terminal UI | ✅ Complete |
-| Phase 2 | Pre-Flight analysis engine (classifier, estimator, planner) | ✅ Complete |
-| Phase 3 | Decision layer (Agent vs Manual + user controls) | ✅ Complete |
-| Phase 4 | Execution simulation with checkpoints & progress tracking | ✅ Complete |
-| Phase 5 | Learning layer (pattern detection, workflow templates) | ✅ Complete |
-
----
-
-## 🛠️ Tech Stack
-
-- **Frontend:** HTML + CSS + Vanilla JS (no framework dependencies)
-- **Design:** Claude-Code-inspired dark terminal aesthetic
-- **Logic:** Client-side simulated analysis engine
-- **Storage:** LocalStorage for learning layer persistence
-
----
-
-## 📁 Project Structure
-
-```
-├── index.html           # UI structure
-├── styles.css           # Design system (dark theme, animations)
-├── preflight-engine.js  # Analysis engine (6 core components)
-├── app.js               # UI controller + execution simulation
-└── README.md            # This file
-```
-
----
-
-## 🚀 Deployment
-
-### Quick: Open Locally
-Just double-click `index.html` — no server needed.
-
-### Share: Deploy to GitHub Pages
-```bash
-git init
-git add .
-git commit -m "Agent Pre-Flight System prototype"
-git remote add origin https://github.com/YOUR_USERNAME/agent-preflight.git
-git push -u origin main
-# Then enable GitHub Pages in repo Settings → Pages → Source: main branch
-```
-
-### Alternative: Netlify (Drag & Drop)
-1. Go to [app.netlify.com/drop](https://app.netlify.com/drop)
-2. Drag the entire project folder onto the page
-3. Get an instant shareable link
-
----
+### How to Build This Architecture
+To present or build this system in a tool like **Figma** or **Canva** for your PPT:
+1. **Flowchart:** Use the Mermaid logic above.
+2. **UI Design:** Focus on the "Pre-Flight Card" as the central bento-box component.
+3. **Engine:** Explain it as a **Pre-Processing Layer** that sits *between* the user's brain and the agent's execution engine.
 
 *Built as a Product Solution for the Anthropic Growth PM challenge — focusing on Claude's agentic capability adoption.*
