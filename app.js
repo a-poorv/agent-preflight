@@ -256,7 +256,7 @@ const App = (function() {
 
     html += `<div class="pf-actions">
       <button class="btn btn-primary" onclick="App.runAgent()">Proceed with Agent &rarr;</button>
-      <button class="btn btn-secondary"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg> Modify</button>
+      <button class="btn btn-secondary" onclick="App.modifyPrompt()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg> Modify</button>
       <button class="btn btn-ghost" onclick="App.runManual()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg> Manual mode</button>
     </div>`;
 
@@ -405,21 +405,38 @@ const App = (function() {
     scrollToBottom();
   }
 
-  function reset() {
+  function reset(repopulatePrompt = null) {
       DOM.messagesArea.innerHTML = '';
       DOM.welcomeView.style.display = 'block';
       DOM.chatView.style.display = 'none';
       currentAnalysis = null;
       isExecuting = false;
       currentStepIndex = 0;
+      
+      if (repopulatePrompt) {
+        DOM.promptInput.value = repopulatePrompt;
+        DOM.promptInput.focus();
+        // Adjust height if needed
+        DOM.promptInput.style.height = 'auto';
+        DOM.promptInput.style.height = DOM.promptInput.scrollHeight + 'px';
+      } else {
+        DOM.promptInput.value = '';
+      }
+      
       window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  function modifyPrompt() {
+    if (!currentAnalysis) return;
+    const prompt = currentAnalysis.prompt;
+    reset(prompt);
   }
 
   function scrollToBottom() {
     window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
   }
 
-  return { init, runAgent, runManual, continueExecution, reset };
+  return { init, runAgent, runManual, continueExecution, reset, modifyPrompt };
 })();
 
 document.addEventListener('DOMContentLoaded', App.init);

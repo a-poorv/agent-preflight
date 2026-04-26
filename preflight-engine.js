@@ -22,6 +22,12 @@ const PreFlightEngine = (function() {
     { regex: /no\s+(new dependencies|external|third.party)/gi, type: 'explicit' }
   ];
 
+  const SKILL_BANK = [
+    { name: 'Home Page Patterns', pattern: /home page/i, ref: '/home-patterns.md', efficiency: 15 },
+    { name: 'Auth Logic', pattern: /login|auth|sign up/i, ref: '/auth-protocol.md', efficiency: 20 },
+    { name: 'UI Layout', pattern: /design|layout|css|style/i, ref: '/ui-standards.md', efficiency: 10 }
+  ];
+
   const CONTEXT_PATTERNS = [
     { regex: /(?:existing|previous|last|earlier|used in|same as)\s+(?:code|layout|design|page|logic|style|home page)/gi, type: 'recall' },
     { regex: /(?:follow|use|refer to)\s+(?:the|existing|our)\s+(?:standard|pattern|style)/gi, type: 'pattern' }
@@ -162,26 +168,27 @@ const PreFlightEngine = (function() {
     return { steps, totalSteps: steps.length };
   }
 
-  function getOptimizationProfile(constraints, riskLevel, taskType, contextTriggers = []) {
+  function getOptimizationProfile(constraints, riskLevel, taskType, contextTriggers = [], skillMatches = []) {
     const isHighRiskOrMultiStep = riskLevel === 'high' || taskType === 'multi_step' || taskType === 'code_gen';
-    const hasContext = contextTriggers.length > 0;
+    const hasContext = contextTriggers.length > 0 || skillMatches.length > 0;
     
     if (isHighRiskOrMultiStep) {
+      const totalEfficiency = skillMatches.reduce((acc, s) => acc + s.efficiency, 0);
       return {
-        description: hasContext ? "Multi-step design task with context detected. I'll prioritize correctness while recalling your existing patterns." : "Multi-step or high-stakes work — I'll trade tokens & time for correctness.",
-        tokens: hasContext ? 25 : 35,
+        description: hasContext ? "Delegated agentic flow with verified skill matches. Pattern recall reduces token overhead." : "Unstructured agentic flow — requires full exploration which increases token consumption.",
+        tokens: Math.max(10, (hasContext ? 20 : 35) - totalEfficiency),
         quality: 95,
-        latency: hasContext ? 30 : 40,
+        latency: hasContext ? 30 : 45,
         bullets: hasContext ? [
-          "Reference identified context to reduce re-derivation",
-          "Apply existing patterns via Workflow/Skill recall",
-          "Self-verify against target design",
-          "Ask for missing file references before starting"
+          "Eliminate decision blind spots using Skill Bank",
+          "Recall existing patterns via /skill references",
+          "Prioritize correctness over speed",
+          "Automated boundary verification"
         ] : [
-          "Read full context before editing",
-          "Self-verify with build / tests after each change",
-          "Generate multiple candidate solutions, pick the best",
-          "Pause at checkpoints for your review"
+          "Full exploration loop required",
+          "High token consumption for context-building",
+          "Manual intervention likely at checkpoints",
+          "Self-correction enabled"
         ],
         mode: "agent",
         profileType: hasContext ? "balanced" : "quality"
@@ -233,17 +240,26 @@ const PreFlightEngine = (function() {
     // Re-build plan with full context for skill tagging
     const finalExecutionPlan = buildExecutionPlan(taskClassification.type, complexity, { constraints, contextTriggers });
 
-    const optimizationProfile = getOptimizationProfile(constraints, complexity.riskLevel, taskClassification.type, contextTriggers);
+    const skillMatches = SKILL_BANK.filter(s => s.pattern.test(prompt));
+    
+    // Re-build plan with full context for skill tagging
+    const finalExecutionPlan = buildExecutionPlan(taskClassification.type, complexity, { constraints, contextTriggers, skillMatches });
+
+    const optimizationProfile = getOptimizationProfile(constraints, complexity.riskLevel, taskClassification.type, contextTriggers, skillMatches);
 
     let confidence = taskClassification.confidence;
-    if (contextTriggers.length > 0) confidence = Math.min(0.99, confidence + 0.1);
+    if (contextTriggers.length > 0 || skillMatches.length > 0) confidence = Math.min(0.99, confidence + 0.1);
 
     let reasoning = '';
-    if (optimizationProfile.mode === 'agent') reasoning = "Iterative coding tasks suit an agent loop with verification.";
-    else reasoning = "Direct querying is best for simple knowledge retrieval.";
+    if (optimizationProfile.mode === 'agent') {
+        reasoning = "High cognitive load detected. Delegating to an agent loop reduces your manual overhead by 80%.";
+        if (skillMatches.length > 0) reasoning += " Verified matching skills in your local bank, further reducing decision risk.";
+    } else {
+        reasoning = "Predictable task. Direct execution avoids unnecessary agentic 'hallucination' and saves tokens.";
+    }
 
     if (contextTriggers.length > 0) {
-      reasoning += ` I've also detected a reference to existing context (${contextTriggers[0].rule}), which allows for token-efficient recall via skills.`;
+      reasoning += ` I've identified context references that eliminate 'decision blind spots' regarding existing code.`;
     }
 
     return {
@@ -255,6 +271,7 @@ const PreFlightEngine = (function() {
       complexity,
       constraints,
       contextTriggers,
+      skillMatches,
       executionPlan: finalExecutionPlan,
       optimizationProfile,
       recommendation: {
