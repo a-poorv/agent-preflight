@@ -15,9 +15,9 @@ const PreFlightEngine = (function() {
     { regex: /keep\s+(.+?)\s+(unchanged|intact|as is)/gi, type: 'explicit' },
     { regex: /preserve\s+(.+)/gi, type: 'boundary' },
     { regex: /without\s+(breaking|changing|modifying)\s+(.+)/gi, type: 'boundary' },
-    { regex: /don't\s+break\s+(.+)/gi, type: 'boundary' },
+    { regex: /don'?t\s+break\s+(.+)/gi, type: 'boundary' },
     { regex: /no\s+(code\s+changes|modifications)/gi, type: 'boundary' },
-    { regex: /propose\s+(multiple|optimized|few|2-3|several)\s+(solutions|options)/gi, type: 'explicit' },
+    { regex: /propose\s+(?:multiple|optimized|few|2-3|several|\s)+\s*(solutions|options|variants)/gi, type: 'explicit' },
     { regex: /must\s+(not|remain|stay|keep)\s+(.+)/gi, type: 'explicit' },
     { regex: /no\s+(new dependencies|external|third.party)/gi, type: 'explicit' }
   ];
