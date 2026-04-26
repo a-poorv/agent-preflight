@@ -324,7 +324,7 @@ const PreFlightEngine = (function() {
             skillMatches
         );
 
-        let confidence = llmResult?.confidence || taskClassification.confidence;
+        let confidence = llmResult?.confidence || heuristicClassification.confidence;
         if (contextTriggers.length > 0 || skillMatches.length > 0) confidence = Math.min(0.99, confidence + 0.1);
 
         let reasoning = llmResult?.reasoning || '';
@@ -369,8 +369,12 @@ const PreFlightEngine = (function() {
             prompt,
             taskType: 'simple_qa',
             taskLabel: 'Simple Question',
+            taskIcon: '❓',
             complexity: { stepCount: 1, riskLevel: 'low', estimatedTokens: 1000 },
             constraints: [],
+            contextTriggers: [],
+            skillMatches: [],
+            suggestedSkills: [],
             executionPlan: { steps: [{ action: 'Answer', desc: 'System fallback mode.' }], totalSteps: 1 },
             optimizationProfile: { mode: 'manual', tokens: 10, quality: 70, latency: 10, bullets: ['Fallback mode engaged'] },
             recommendation: { mode: 'manual', confidence: 0.5, reasoning: 'Engine encountered a critical error, falling back to manual mode for safety.' }
