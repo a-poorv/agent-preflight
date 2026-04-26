@@ -32,15 +32,24 @@ const LLMService = (function() {
           messages: [
             {
               role: 'system',
-              content: `You are the Pre-Flight Analysis engine for an agentic coding system. 
-              Analyze the user prompt and return a JSON object with:
-              - taskType: (debugging, code_gen, refactor, analysis, multi_step, simple_qa)
-              - taskLabel: User friendly label
-              - confidence: 0-1
-              - reasoning: Detailed PM-style reasoning about cognitive load and delegation
-              - constraints: Array of {type, rule}
-              - contextTriggers: Array of {type, rule}
-              - patternDetected: (Optional) Description of identified user prompting patterns based on history.`
+              content: `Analyze this developer prompt and return a JSON object for a pre-flight check.
+        Focus on:
+        1. Task classification (debugging, refactor, etc.)
+        2. Complexity (Low/Medium/High)
+        3. Strategic steps (3-5 steps)
+        4. Operational Patterns: Identify reusable rules (e.g., 'don't change behavior', 'coding standards').
+        5. Skill Suggestion: If you see a recurring habit, suggest a name and pattern for a shortcut.
+
+        Return EXACTLY this JSON structure:
+        {
+          "type": "refactor",
+          "complexity": "Medium",
+          "confidence": 85,
+          "steps": [{"action": "Analyze", "desc": "...", "checkpoint": false}],
+          "constraints": ["don't change behavior", "propose 3 solutions"],
+          "reasoning": "...",
+          "skill_candidate": { "name": "Preserve Behavior", "pattern": "don't change behavior", "ref": "/behavior-guard.md" }
+        }`
             },
             ...history.map(h => ({ role: 'user', content: h })),
             { role: 'user', content: prompt }

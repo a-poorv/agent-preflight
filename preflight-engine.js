@@ -246,13 +246,26 @@ const PreFlightEngine = (function() {
         if (typeof LLMService !== 'undefined' && LLMService.hasKey()) {
             llmResult = await LLMService.analyzePrompt(prompt, history);
         }
+        
+        // 2. Identify Task Type (Merge LLM finding with Heuristic)
+        const typeKey = llmResult?.type || Object.keys(TASK_PATTERNS).find(key => 
+            TASK_PATTERNS[key].keywords.some(k => prompt.toLowerCase().includes(k))
+        ) || 'code_gen';
+        
+        const typeConfig = TASK_PATTERNS[typeKey] || TASK_PATTERNS.code_gen;
 
-        const taskClassification = classifyTask(prompt);
-        const complexity = estimateComplexity(prompt, taskClassification.type);
-        const constraints = extractConstraints(prompt);
+        // 3. Extract Constraints (Heuristic + LLM bifurcation)
+        let constraints = extractConstraints(prompt);
+        if (llmResult?.constraints) {
+            llmResult.constraints.forEach(rule => {
+                if (!constraints.some(c => c.rule === rule)) {
+                    constraints.push({ type: 'explicit', rule });
+                }
+            });
+        }
 
         // Add task-specific system guardrails
-        if (taskClassification.type === 'simple_qa') {
+        if (typeKey === 'simple_qa') {
           constraints.push({ type: 'system', rule: 'Prioritize accuracy over length' });
           constraints.push({ type: 'system', rule: 'Cite sources where applicable' });
         } else {
@@ -269,16 +282,29 @@ const PreFlightEngine = (function() {
 
         const skillMatches = LOCAL_SKILL_BANK.filter(s => new RegExp(s.pattern, 'i').test(prompt));
         
-        // Identify potential NEW skills from constraints or boundaries
+        // Identify potential NEW skills (Heuristic + LLM candidate)
         const suggestedSkills = [];
+        
+        // Priority 1: LLM Dynamic Suggestion
+        if (llmResult?.skill_candidate) {
+            suggestedSkills.push({
+                name: llmResult.skill_candidate.name,
+                pattern: llmResult.skill_candidate.pattern,
+                ref: llmResult.skill_candidate.ref
+            });
+        }
+        
+        // Priority 2: Heuristic Patterns (fallback)
         constraints.forEach(c => {
-            if (c.type === 'boundary' || (c.type === 'explicit' && c.rule.length > 10)) {
-                const label = c.rule.length > 20 ? c.rule.substring(0, 17) + '...' : c.rule;
-                suggestedSkills.push({
-                    name: `Workflow optimization: "${label}"`,
-                    pattern: c.rule,
-                    ref: `/${c.rule.toLowerCase().replace(/[^a-z0-9]+/g, '-')}.md`
-                });
+            if (!suggestedSkills.some(s => s.pattern === c.rule)) {
+                if (c.type === 'boundary' || (c.type === 'explicit' && c.rule.length > 10)) {
+                    const label = c.rule.length > 20 ? c.rule.substring(0, 17) + '...' : c.rule;
+                    suggestedSkills.push({
+                        name: `Workflow optimization: "${label}"`,
+                        pattern: c.rule,
+                        ref: `/${c.rule.toLowerCase().replace(/[^a-z0-9]+/g, '-')}.md`
+                    });
+                }
             }
         });
 
