@@ -181,8 +181,10 @@ const App = (function() {
               <div style="width:24px; height:24px; background:#3D8B63; color:white; border-radius:50%; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"></polyline></svg>
               </div>
-              <div style="font-size:13px; color:#2E694B; font-weight:500; flex:1;">
-                <span style="font-weight:700;">Intelligence applied:</span> Using <strong>${analysis.skillMatches[0].ref.replace('.md', '')}</strong> to optimize this process.
+              <div style="font-size:13px; color:#2E694B; font-weight:500; flex:1; display:flex; align-items:center; gap:8px;">
+                <span style="font-weight:700;">Intelligence applied:</span>
+                <span style="background:black; color:white; padding:2px 8px; border-radius:4px; font-family:var(--font-mono); font-size:11px; letter-spacing:0.5px;">${analysis.skillMatches[0].ref.toUpperCase()}</span>
+                <span style="color:rgba(46,105,75,0.7); font-size:12px;">based on your operational preferences.</span>
               </div>
               <div style="display:flex; gap:8px;">
                 <button class="btn-nudge-action btn-discard-skill" style="padding:4px 10px; font-size:11px; background:transparent; border:1px solid #3D8B63; color:#3D8B63; border-radius:6px; cursor:pointer;" data-ref="${analysis.skillMatches[0].ref}">Discard</button>

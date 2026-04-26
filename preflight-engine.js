@@ -28,9 +28,9 @@ const PreFlightEngine = (function() {
 
   // Initialize local skill bank from storage or defaults
   let LOCAL_SKILL_BANK = JSON.parse(localStorage.getItem('preflight_skills')) || [
-    { name: 'Home Page Patterns', pattern: 'home page', ref: '/home-patterns.md', efficiency: 15 },
-    { name: 'Auth Logic', pattern: 'login|auth|sign up', ref: '/auth-protocol.md', efficiency: 20 },
-    { name: 'UI Layout', pattern: 'design|layout|css|style', ref: '/ui-standards.md', efficiency: 10 }
+    { name: 'Home Page Patterns', pattern: 'home page', ref: '/home-skill.md', efficiency: 15 },
+    { name: 'Auth Protocol', pattern: 'login|auth|sign up', ref: '/auth-skill.md', efficiency: 20 },
+    { name: 'UI Standards', pattern: 'design|layout|css|style', ref: '/ui-skill.md', efficiency: 10 }
   ];
 
   function saveNewSkill(name, pattern, ref) {
@@ -315,7 +315,7 @@ const PreFlightEngine = (function() {
                     suggestedSkills.push({
                         name: `Workflow optimization: "${label}"`,
                         pattern: c.rule,
-                        ref: `/${c.rule.toLowerCase().replace(/[^a-z0-9]+/g, '-')}.md`
+                        ref: `/${c.rule.toLowerCase().replace(/[^a-z0-9]+/g, '-')}-skill.md`
                     });
                 }
             }
@@ -343,7 +343,7 @@ const PreFlightEngine = (function() {
         if (!reasoning) {
             if (optimizationProfile.mode === 'agent') {
                 reasoning = "High cognitive load detected. Delegating to an agent loop reduces manual overhead by 80%.";
-                if (skillMatches.length > 0) reasoning += " Applying matched /skill workflows to optimize accuracy and reduce reasoning overhead.";
+                if (skillMatches.length > 0) reasoning += " Applying saved /skill workflows to optimize accuracy and reduce reasoning overhead.";
                 if (suggestedSkills.length > 0) reasoning += " Identified an operational pattern that can be converted into a deterministic workflow.";
             } else {
                 reasoning = "Predictable task. Direct execution ensures immediate delivery while avoiding unnecessary reasoning overhead.";
