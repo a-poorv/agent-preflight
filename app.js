@@ -24,6 +24,7 @@ const App = (function() {
   function init() {
     renderQuickPrompts();
     bindEvents();
+    bindDelegateEvents();
   }
 
   function renderQuickPrompts() {
@@ -47,6 +48,15 @@ const App = (function() {
         DOM.promptInput.value = btn.dataset.prompt;
         autoResize(DOM.promptInput);
         DOM.promptInput.focus();
+      }
+    });
+  }
+  
+  function bindDelegateEvents() {
+    DOM.messagesArea.addEventListener('click', (e) => {
+      const btn = e.target.closest('.btn-save-skill');
+      if (btn && !btn.disabled) {
+        saveSkill(btn, btn.dataset.name, btn.dataset.pattern, btn.dataset.ref);
       }
     });
   }
@@ -167,7 +177,10 @@ const App = (function() {
                     <h4 style="margin:0; font-size:15px; font-weight:700; color:var(--text-main);">Auto-create a reusable skill</h4>
                     <span style="font-size:9px; font-weight:700; color:var(--text-muted); background:#eee; padding:2px 6px; border-radius:4px; letter-spacing:0.5px;">SKILL</span>
                   </div>
-                  <button class="btn" style="padding:6px 16px; font-size:12px; font-weight:700; border:1px solid var(--accent-orange); color:var(--accent-orange); background:white; border-radius:8px; cursor:pointer;" onclick="App.saveSkill(this, '${analysis.suggestedSkills[0].name.replace(/'/g, "\\'")}', '${analysis.suggestedSkills[0].pattern.replace(/'/g, "\\'")}', '${analysis.suggestedSkills[0].ref.replace(/'/g, "\\'")}')">
+                  <button class="btn btn-save-skill" style="padding:6px 16px; font-size:12px; font-weight:700; border:1px solid var(--accent-orange); color:var(--accent-orange); background:white; border-radius:8px; cursor:pointer;" 
+                    data-name="${analysis.suggestedSkills[0].name.replace(/"/g, '&quot;')}" 
+                    data-pattern="${analysis.suggestedSkills[0].pattern.replace(/"/g, '&quot;')}" 
+                    data-ref="${analysis.suggestedSkills[0].ref.replace(/"/g, '&quot;')}">
                     Save as /skill
                   </button>
                 </div>
