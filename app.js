@@ -172,7 +172,7 @@ const App = (function() {
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"></polyline></svg>
               </div>
               <div style="font-size:13px; color:#2E694B; font-weight:500;">
-                <span style="font-weight:700;">Intelligence applied:</span> Using <strong>/${analysis.skillMatches[0].ref.replace('.md', '')}</strong> to optimize this process based on your habits.
+                <span style="font-weight:700;">Intelligence applied:</span> Using <strong>${analysis.skillMatches[0].ref.replace('.md', '')}</strong> to optimize this process based on your habits.
               </div>
             </div>
           ` : ''}

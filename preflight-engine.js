@@ -286,18 +286,30 @@ const PreFlightEngine = (function() {
         // Identify potential NEW skills (Heuristic + LLM candidate)
         const suggestedSkills = [];
         
+        // Helper to check if a pattern is already covered by existing skills
+        const isPatternAlreadySaved = (pattern) => {
+            return LOCAL_SKILL_BANK.some(s => 
+                s.pattern.toLowerCase().includes(pattern.toLowerCase()) || 
+                pattern.toLowerCase().includes(s.pattern.toLowerCase())
+            );
+        };
+        
         // Priority 1: LLM Dynamic Suggestion
         if (llmResult?.skill_candidate) {
-            suggestedSkills.push({
-                name: llmResult.skill_candidate.name,
-                pattern: llmResult.skill_candidate.pattern,
-                ref: llmResult.skill_candidate.ref
-            });
+            const candidate = llmResult.skill_candidate;
+            if (!isPatternAlreadySaved(candidate.pattern)) {
+                suggestedSkills.push({
+                    name: candidate.name,
+                    pattern: candidate.pattern,
+                    ref: candidate.ref
+                });
+            }
         }
         
         // Priority 2: Heuristic Patterns (fallback)
         constraints.forEach(c => {
-            if (!suggestedSkills.some(s => s.pattern === c.rule)) {
+            // Only suggest if not already saved and not already suggested by LLM
+            if (!isPatternAlreadySaved(c.rule) && !suggestedSkills.some(s => s.pattern === c.rule)) {
                 if (c.type === 'boundary' || (c.type === 'explicit' && c.rule.length > 10)) {
                     const label = c.rule.length > 20 ? c.rule.substring(0, 17) + '...' : c.rule;
                     suggestedSkills.push({
