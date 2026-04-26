@@ -43,6 +43,14 @@ The **Pre-Flight Card** turns the "black box" of agentic execution into a transp
 | Agent runs unchecked | Checkpoints pause for user review |
 | Trial-and-error | Informed decision-making |
 
+### The Token Optimization Loop: Agent vs. Workflow
+
+A key PM challenge in agent adoption is **token efficiency and execution determinism**. The Pre-Flight system introduces a clear paradigm to solve this:
+
+1. **Agent Execution (Exploratory):** High autonomy, high token usage. Best for net-new problems where Claude must dynamically plan and reason through steps (e.g., "Fix this unknown bug").
+2. **Workflow Execution (Deterministic):** Low token usage, high reliability. Once a task is solved repeatedly (e.g., "Review PR for security"), the dynamic planning phase becomes redundant.
+3. **The Value Proposition:** The system acts as a "Token Optimization Loop." It detects when an Agent is repeatedly solving similar tasks and suggests converting the successful execution plan into a **Workflow Template**. This bypasses the expensive reasoning/planning phase, saving ~40% in token costs, and ensures the exact same tools and constraints are reliably applied every time.
+
 ---
 
 ## 🏗️ Architecture
@@ -80,9 +88,9 @@ The **Pre-Flight Card** turns the "black box" of agentic execution into a transp
 
 ## 🖥️ Prototype Demo
 
-### 📍 [Live Demo →](https://YOUR_GITHUB_USERNAME.github.io/agent-preflight/)
+### 📍 [Live Demo →](https://agent-preflight.vercel.app/)
 
-> Replace the link above after deploying to GitHub Pages (instructions below)
+> The prototype is live and fully interactive in the browser.
 
 ### What to Try
 

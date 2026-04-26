@@ -310,7 +310,7 @@ const PreFlightEngine = (() => {
         return {
           detected: true,
           count: recentSameType.length,
-          message: `You've run ${recentSameType.length} similar ${analysis.taskLabel} tasks recently. Save this as a reusable workflow template?`
+          message: `You've used the Agent for ${recentSameType.length} similar ${analysis.taskLabel} tasks recently. Save this exact execution plan as a <strong>Workflow Template</strong> to bypass the agent planning phase, reduce token usage, and ensure deterministic execution.`
         };
       }
       return { detected: false };
