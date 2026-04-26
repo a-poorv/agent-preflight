@@ -324,6 +324,7 @@ const App = (function() {
             <div style="display:flex; align-items:center; gap:8px;">
                 <h4 style="font-size:15px; font-weight:600; margin:0; color:var(--text-main);">${step.action}</h4>
                 ${step.checkpoint ? `<span style="font-size:9px; font-weight:700; background:rgba(236, 163, 53, 0.15); color:var(--accent-yellow); padding:2px 6px; border-radius:4px;">CHECKPOINT</span>` : ''}
+                ${step.skillRef ? `<span style="font-size:10px; font-weight:700; color:#D96C51; background:rgba(217,108,81,0.08); padding:2px 8px; border-radius:4px; border:1px solid rgba(217,108,81,0.2); letter-spacing:0.3px;">${step.skillRef}</span>` : ''}
             </div>
             <p style="font-size:13px; color:var(--text-muted); margin:4px 0 0 0; ${status==='pending' ? 'opacity:0.5;' : ''}">${step.desc}</p>
             ${extraHtml}

@@ -127,16 +127,33 @@ const PreFlightEngine = (function() {
     return constraints;
   }
 
-  function buildExecutionPlan(taskType, complexity) {
-    const templateSteps = STEP_TEMPLATES[taskType] || STEP_TEMPLATES.simple_qa;
-    const steps = templateSteps.map((step, i) => ({
-      id: i + 1,
-      action: step.action,
-      desc: step.desc,
-      tokens: step.tokens + Math.round((Math.random() - 0.5) * 400),
-      risk: step.risk,
-      checkpoint: step.checkpoint || false
-    }));
+  function buildExecutionPlan(taskType, complexity, analysis = null) {
+    const template = STEP_TEMPLATES[taskType] || STEP_TEMPLATES.simple_qa;
+    const steps = template.map((s, idx) => {
+      let step = { 
+        ...s, 
+        id: idx + 1,
+        tokens: s.tokens + Math.round((Math.random() - 0.5) * 400),
+        checkpoint: s.checkpoint || false
+      };
+      
+      // Mimic skill injection logic
+      if (analysis && analysis.contextTriggers && analysis.contextTriggers.length > 0) {
+        if (idx === 0) {
+           step.skillRef = '/shared-context.md';
+           step.desc = `[Recalling Patterns] ${step.desc}`;
+        }
+      }
+      
+      if (analysis && analysis.constraints && analysis.constraints.some(c => c.type === 'boundary')) {
+        if (idx === template.length - 1) {
+           step.skillRef = '/strict-rules.md';
+           step.desc = `[Applying Guardrails] ${step.desc}`;
+        }
+      }
+      
+      return step;
+    });
 
     if (complexity.riskLevel === 'high') {
       steps.forEach(s => { if (s.risk === 'medium' || s.risk === 'high') s.checkpoint = true; });
@@ -203,7 +220,7 @@ const PreFlightEngine = (function() {
     const taskClassification = classifyTask(prompt);
     const complexity = estimateComplexity(prompt, taskClassification.type);
     const constraints = extractConstraints(prompt);
-    const executionPlan = buildExecutionPlan(taskClassification.type, complexity);
+    const executionPlan = buildExecutionPlan(taskClassification.type, complexity, { constraints, contextTriggers: [] }); // Temp pass for context detection later
     
     const contextTriggers = [];
     CONTEXT_PATTERNS.forEach(p => {
@@ -212,6 +229,9 @@ const PreFlightEngine = (function() {
         contextTriggers.push({ type: p.type, rule: match[0] });
       }
     });
+
+    // Re-build plan with full context for skill tagging
+    const finalExecutionPlan = buildExecutionPlan(taskClassification.type, complexity, { constraints, contextTriggers });
 
     const optimizationProfile = getOptimizationProfile(constraints, complexity.riskLevel, taskClassification.type, contextTriggers);
 
@@ -235,7 +255,7 @@ const PreFlightEngine = (function() {
       complexity,
       constraints,
       contextTriggers,
-      executionPlan,
+      executionPlan: finalExecutionPlan,
       optimizationProfile,
       recommendation: {
         mode: optimizationProfile.mode,
