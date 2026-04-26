@@ -57,12 +57,13 @@ A key PM challenge in agent adoption is **token efficiency and execution determi
 
 ### Core Components
 
-1. **Task Classifier** — Categorizes user intent (debugging, code gen, analysis, refactor, research, multi-step, Q&A)
-2. **Complexity Estimator** — Scores step count, context load, ambiguity, risk level, token budget
-3. **Constraint Extractor** — Parses explicit ("don't modify tests") and implicit (read-only analysis) constraints
-4. **Execution Planner** — Generates step-by-step plan with checkpoints at critical operations
-5. **Decision Engine** — Recommends Agent vs Manual mode with confidence score
-6. **Learning Layer** — Detects repeated patterns, suggests saving as reusable workflow templates
+1. **Task Classifier** — Categorizes user intent (debugging, code gen, analysis, refactor, research, multi_step, Q&A)
+2. **Complexity Estimator** — Scores step count, context load, risk level, and token budget.
+3. **Constraint Extractor** — Parses explicit ("don't modify tests") and implicit (read-only analysis) boundaries.
+4. **Context Engine** — Scans for "Context Links" (references to existing work) and matches them against the **Skill Bank** (`/skill.md` recall).
+5. **Execution Planner** — Generates a step-by-step plan with visual "Skill Badges" showing exactly where optimizations are applied.
+6. **Intelligent Pattern Detector** — Identifies recurring "Operational Habits" (e.g., requesting multiple solutions) and suggests converting them into permanent skills to optimize future tokens.
+7. **Decision Engine** — Recommends Agent vs Manual mode by resolving the "Decision Blind Spot" regarding risk and cost.
 
 ### System Flow
 

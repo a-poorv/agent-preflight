@@ -22,11 +22,18 @@ const PreFlightEngine = (function() {
     { regex: /no\s+(new dependencies|external|third.party)/gi, type: 'explicit' }
   ];
 
-  const SKILL_BANK = [
-    { name: 'Home Page Patterns', pattern: /home page/i, ref: '/home-patterns.md', efficiency: 15 },
-    { name: 'Auth Logic', pattern: /login|auth|sign up/i, ref: '/auth-protocol.md', efficiency: 20 },
-    { name: 'UI Layout', pattern: /design|layout|css|style/i, ref: '/ui-standards.md', efficiency: 10 }
+  // Initialize local skill bank from storage or defaults
+  let LOCAL_SKILL_BANK = JSON.parse(localStorage.getItem('preflight_skills')) || [
+    { name: 'Home Page Patterns', pattern: 'home page', ref: '/home-patterns.md', efficiency: 15 },
+    { name: 'Auth Logic', pattern: 'login|auth|sign up', ref: '/auth-protocol.md', efficiency: 20 },
+    { name: 'UI Layout', pattern: 'design|layout|css|style', ref: '/ui-standards.md', efficiency: 10 }
   ];
+
+  function saveNewSkill(name, pattern, ref) {
+    LOCAL_SKILL_BANK.push({ name, pattern, ref, efficiency: 10 });
+    localStorage.setItem('preflight_skills', JSON.stringify(LOCAL_SKILL_BANK));
+    return true;
+  }
 
   const CONTEXT_PATTERNS = [
     { regex: /(?:existing|previous|last|earlier|used in|same as)\s+(?:code|layout|design|page|logic|style|home page)/gi, type: 'recall' },
@@ -255,9 +262,20 @@ const PreFlightEngine = (function() {
       }
     });
 
-    const skillMatches = SKILL_BANK.filter(s => s.pattern.test(prompt));
-    const detectedPatterns = PATTERN_DETECTORS.filter(p => p.regex.test(prompt));
+    const skillMatches = LOCAL_SKILL_BANK.filter(s => new RegExp(s.pattern, 'i').test(prompt));
     
+    // Identify potential NEW skills from constraints or boundaries
+    const suggestedSkills = [];
+    constraints.forEach(c => {
+        if (c.type === 'boundary' || c.type === 'explicit') {
+            suggestedSkills.push({
+                name: `Auto-create skill: "${c.rule}"`,
+                pattern: c.rule,
+                ref: `/${c.rule.toLowerCase().replace(/\s+/g, '-')}.md`
+            });
+        }
+    });
+
     // Re-build plan with full context for skill tagging
     const finalExecutionPlan = buildExecutionPlan(
         llmResult?.taskType || taskClassification.type, 
@@ -301,7 +319,7 @@ const PreFlightEngine = (function() {
       constraints: llmResult?.constraints || constraints,
       contextTriggers,
       skillMatches,
-      detectedPatterns,
+      suggestedSkills,
       executionPlan: finalExecutionPlan,
       optimizationProfile,
       recommendation: {
@@ -312,5 +330,5 @@ const PreFlightEngine = (function() {
     };
   }
 
-  return { analyze };
+  return { analyze, saveNewSkill };
 })();

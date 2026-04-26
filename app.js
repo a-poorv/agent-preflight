@@ -147,52 +147,44 @@ const App = (function() {
     });
     html += `</div></div>`;
 
+    // Execution Guardrails
     if (constraints.length > 0) {
-      html += `<div class="pf-section" style="border-bottom: none; padding-bottom: 12px;">
+      html += `<div class="pf-section" style="border-bottom: none; padding-bottom: 24px;">
         <div class="pf-section-title">EXECUTION GUARDRAILS</div>
-        <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 12px;">Strict rules I will follow to keep this agent on track.</div>`;
+        <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 16px;">Strict rules I will follow to keep this agent on track.</div>
+        
+        <div style="display:flex; flex-direction:column; gap:16px;">
+          ${analysis.suggestedSkills && analysis.suggestedSkills.length > 0 ? `
+            <div class="skill-suggestion-card" style="padding:20px; background:rgba(217,108,81,0.04); border:1px solid rgba(217,108,81,0.15); border-radius:16px; display:flex; gap:16px; align-items:flex-start;">
+              <div style="width:36px; height:36px; background:var(--accent-orange); color:white; border-radius:50%; display:flex; align-items:center; justify-content:center; flex-shrink:0; font-size:18px;">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+              </div>
+              <div style="flex:1;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                  <div style="display:flex; align-items:center; gap:8px;">
+                    <h4 style="margin:0; font-size:15px; font-weight:700; color:var(--text-main);">Auto-create a reusable skill</h4>
+                    <span style="font-size:9px; font-weight:700; color:var(--text-muted); background:#eee; padding:2px 6px; border-radius:4px; letter-spacing:0.5px;">SKILL</span>
+                  </div>
+                  <button class="btn" style="padding:6px 16px; font-size:12px; font-weight:700; border:1px solid var(--accent-orange); color:var(--accent-orange); background:white; border-radius:8px; cursor:pointer;" onclick="App.saveSkill('${analysis.suggestedSkills[0].name}', '${analysis.suggestedSkills[0].pattern}', '${analysis.suggestedSkills[0].ref}')">
+                    Save as /skill
+                  </button>
+                </div>
+                <p style="margin:0 0 12px 0; font-size:14px; font-weight:500; color:var(--text-main); font-family:var(--font-sans);">"${analysis.suggestedSkills[0].pattern}"</p>
+                <div style="padding:12px; background:white; border-radius:12px; border:1px solid rgba(0,0,0,0.05); font-size:13px; line-height:1.5;">
+                  <span style="font-weight:700; color:var(--text-main);">Why this recommendation:</span> You've set a specific rule or pattern. Saving this as a reusable skill guarantees the agent follows it in the future, while optimizing token usage and improving response quality.
+                </div>
+              </div>
+            </div>
+          ` : ''}
 
-      if (analysis.contextTriggers && analysis.contextTriggers.length > 0) {
-        analysis.contextTriggers.forEach(t => {
-          html += `<div style="background: rgba(91, 118, 166, 0.05); border: 1px solid rgba(91, 118, 166, 0.2); padding: 14px; border-radius: 12px; margin-bottom: 12px; display: flex; gap: 12px; align-items: flex-start;">
-            <div style="width: 24px; height: 24px; background: #5B76A6; color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 12px;">🔗</div>
-            <div style="flex: 1;">
-              <div style="font-weight: 600; font-size: 13px; color: var(--text-main);">Context link identified: "${t.rule}"</div>
-              <div style="font-size: 12px; color: var(--text-muted); margin-top: 4px;">Detected reference to existing work. Should I recall a specific Skill or ask for the file path before starting?</div>
-              <div style="display: flex; gap: 8px; margin-top: 10px;">
-                <button class="btn" style="padding: 4px 10px; font-size: 11px; background: white; border: 1px solid #5B76A6; color: #5B76A6;">Recall /skill</button>
-                <button class="btn" style="padding: 4px 10px; font-size: 11px; background: white; border: 1px solid var(--border-light); color: var(--text-muted);">Ask for files</button>
-              </div>
+          ${constraints.map(c => `
+            <div class="constraint-item" style="display:flex; align-items:center; gap:12px; font-size:14px; color:var(--text-main); padding-left: 8px;">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--accent-green)" stroke-width="3"><polyline points="20 6 9 17 4 12"></polyline></svg>
+              ${c.rule}
             </div>
-          </div>`;
-        });
-      }
-      
-      constraints.forEach(c => {
-        if (c.type === 'boundary') {
-          html += `<div class="constraint-item" style="background: rgba(217, 108, 81, 0.05); border: 1px solid rgba(217, 108, 81, 0.2); padding: 16px; border-radius: 12px; align-items: flex-start; flex-direction: column; gap: 12px;">
-            <div style="display: flex; gap: 12px; align-items: center; width: 100%;">
-              <span class="constraint-icon" style="background: var(--accent-orange); color: white; width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg></span>
-              <div style="flex: 1;">
-                <div style="font-weight: 600; color: var(--text-main); font-size: 14px; display: flex; align-items: center; gap: 8px;">Auto-create a reusable skill <span style="background: #E5E5E5; color: #555; font-size: 9px; padding: 2px 6px; border-radius: 4px; font-weight: 700; letter-spacing: 0.5px;">SKILL</span></div>
-                <div style="font-size: 13px; color: var(--text-muted); margin-top: 4px;">"${c.rule}"</div>
-              </div>
-              <button style="background: white; border: 1px solid var(--accent-orange); color: var(--accent-orange); padding: 6px 12px; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 12px; white-space: nowrap;">
-                Save as /skill
-              </button>
-            </div>
-            <div style="font-size: 13px; color: var(--text-muted); background: white; padding: 10px 12px; border-radius: 8px; width: 100%; border: 1px solid var(--border-light);">
-              <strong style="color: var(--text-main);">Why this recommendation:</strong> You've set a strict rule. Saving this as a reusable skill guarantees the agent follows it in the future, while optimizing token usage and improving response quality.
-            </div>
-          </div>`;
-        } else {
-          html += `<div class="constraint-item">
-            <span class="constraint-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg></span>
-            <span>${c.rule}</span>
-          </div>`;
-        }
-      });
-      html += `</div>`;
+          `).join('')}
+        </div>
+      </div>`;
     }
 
     if (optimizationProfile) {
@@ -200,6 +192,7 @@ const App = (function() {
       let optClass = 'opt-badge-balanced';
       if (optimizationProfile.profileType === 'skill') { optLabel = 'Efficiency'; }
       if (optimizationProfile.profileType === 'quality') { optLabel = 'Quality-optimized'; optClass = 'opt-badge-quality'; }
+      if (analysis.skillMatches.length > 0) { optLabel = 'Skill-optimized'; optClass = 'opt-badge-quality'; }
 
       const badgeBg = optClass === 'opt-badge-quality' ? 'var(--accent-orange)' : '#F3F1EB';
       const badgeColor = optClass === 'opt-badge-quality' ? '#FFF' : 'var(--text-main)';
@@ -231,30 +224,9 @@ const App = (function() {
           </ul>
         </div>`;
 
-    // Pattern Detection Card (Intelligent Suggestion)
-    if (analysis.detectedPatterns && analysis.detectedPatterns.length > 0) {
-      html += `<div class="pf-pattern-card" style="margin:24px 0; padding:20px; background:rgba(217,108,81,0.04); border:1px dashed var(--accent-orange); border-radius:16px; display:flex; gap:16px; align-items:flex-start;">
-          <div style="font-size:24px;">💡</div>
-          <div style="flex:1;">
-              <h4 style="margin:0 0 4px 0; font-size:15px; font-weight:700; color:var(--accent-orange);">Operational Pattern Detected</h4>
-              <p style="margin:0; font-size:13px; color:var(--text-muted); line-height:1.5;">
-                  You frequently request <strong>${analysis.detectedPatterns.map(p => p.label).join(', ')}</strong>. 
-                  Saving this as a <strong>Reusable Skill</strong> would reduce your future prompt length by ~20% and ensure consistent agent behavior.
-              </p>
-              <div style="margin-top:12px; display:flex; gap:8px;">
-                  <button class="btn btn-secondary" style="padding:6px 12px; font-size:12px; border-color:var(--accent-orange); color:var(--accent-orange); background:white;">+ Save as Skill</button>
-                  <button class="btn btn-ghost" style="padding:6px 12px; font-size:12px;">Dismiss</button>
-              </div>
-          </div>
+      html += `<div class="pf-reasoning" style="margin-top:20px; padding:16px; background:#F5F2EA; border-radius:12px; font-size:14px; color:var(--text-main); border:1px solid rgba(0,0,0,0.05);">
+        <span style="font-weight:700;">Why this recommendation:</span> ${analysis.recommendation.reasoning}
       </div>`;
-    }
-
-    html += `<div class="rec-reasoning" style="margin-top:20px; padding:16px; background:#F5F2EA; border-radius:12px; font-size:14px; color:var(--text-main); border:1px solid rgba(0,0,0,0.05);">
-        <strong>Why this recommendation:</strong> ${analysis.recommendation.reasoning}
-    </div>`;
-    
-    html += `</div>`; // end recommendation section
-
     }
 
     html += `<div class="pf-actions">
@@ -435,11 +407,26 @@ const App = (function() {
     reset(prompt);
   }
 
+  function saveSkill(name, pattern, ref) {
+    PreFlightEngine.saveNewSkill(name, pattern, ref);
+    const btn = event.target;
+    btn.innerHTML = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"></polyline></svg> Saved`;
+    btn.style.background = 'var(--accent-green)';
+    btn.style.color = 'white';
+    btn.style.borderColor = 'var(--accent-green)';
+    btn.disabled = true;
+    
+    // Simulate re-analysis to show optimization
+    setTimeout(() => {
+        handleSubmit();
+    }, 800);
+  }
+
   function scrollToBottom() {
     window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
   }
 
-  return { init, runAgent, runManual, continueExecution, reset, modifyPrompt };
+  return { init, runAgent, runManual, continueExecution, reset, modifyPrompt, saveSkill };
 })();
 
 document.addEventListener('DOMContentLoaded', App.init);
