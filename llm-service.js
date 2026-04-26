@@ -17,12 +17,16 @@ const LLMService = (function() {
     }
 
     try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 3500); // 3.5s strict timeout
+
       const response = await fetch('https://api.openai.com/v1/chat/completions', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${apiKey}`
         },
+        signal: controller.signal,
         body: JSON.stringify({
           model: 'gpt-4o-mini',
           messages: [
@@ -45,10 +49,12 @@ const LLMService = (function() {
         })
       });
 
+      clearTimeout(timeoutId);
       const data = await response.json();
       return JSON.parse(data.choices[0].message.content);
     } catch (error) {
-      console.error('LLM Analysis failed:', error);
+      if (error.name === 'AbortError') console.warn('LLM Analysis timed out - falling back to heuristic');
+      else console.error('LLM Analysis failed:', error);
       return null;
     }
   }

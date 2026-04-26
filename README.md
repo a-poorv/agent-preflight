@@ -57,13 +57,13 @@ A key PM challenge in agent adoption is **token efficiency and execution determi
 
 ### Core Components
 
-1. **Task Classifier** — Categorizes user intent (debugging, code gen, analysis, refactor, research, multi_step, Q&A)
+1. **Task Classifier** — Categorizes user intent (debugging, code gen, analysis, refactor, research, multi_step, Q&A).
 2. **Complexity Estimator** — Scores step count, context load, risk level, and token budget.
-3. **Constraint Extractor** — Parses explicit ("don't modify tests") and implicit (read-only analysis) boundaries.
-4. **Context Engine** — Scans for "Context Links" (references to existing work) and matches them against the **Skill Bank** (`/skill.md` recall).
-5. **Execution Planner** — Generates a step-by-step plan with visual "Skill Badges" showing exactly where optimizations are applied.
-6. **Intelligent Pattern Detector** — Identifies recurring "Operational Habits" (e.g., requesting multiple solutions) and suggests converting them into permanent skills to optimize future tokens.
-7. **Decision Engine** — Recommends Agent vs Manual mode by resolving the "Decision Blind Spot" regarding risk and cost.
+3. **Dynamic Intent Extractor** — Analyzes the prompt for complex operational boundaries and rules to identify "Skill Candidates."
+4. **Functional Skill Bank** — A persistent repository (localStorage) of `/skill.md` templates that reduce reasoning overhead.
+5. **Execution Planner** — Generates a step-by-step plan with visual "Skill Badges" and checkpoints.
+6. **In-Line Optimization Loop** — A real-time feedback system that re-calculates the "Optimization Profile" instantly when a skill is saved or recalled.
+7. **Decision Engine** — Resolves the "Decision Blind Spot" by providing an honest preview of risk, cost, and efficiency.
 
 ### System Flow
 

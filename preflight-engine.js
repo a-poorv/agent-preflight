@@ -236,98 +236,114 @@ const PreFlightEngine = (function() {
   }
 
   async function analyze(prompt, history = []) {
-    // Attempt live LLM analysis if API key exists
-    let llmResult = null;
-    if (typeof LLMService !== 'undefined' && LLMService.hasKey()) {
-        llmResult = await LLMService.analyzePrompt(prompt, history);
-    }
-
-    const taskClassification = classifyTask(prompt);
-    const complexity = estimateComplexity(prompt, taskClassification.type);
-    const constraints = extractConstraints(prompt);
-
-    // Add task-specific system guardrails
-    if (taskClassification.type === 'simple_qa') {
-      constraints.push({ type: 'system', rule: 'Prioritize accuracy over length' });
-      constraints.push({ type: 'system', rule: 'Cite sources where applicable' });
-    } else {
-      constraints.push({ type: 'system', rule: 'Will ask for review before modifying critical files' });
-    }
-    
-    const contextTriggers = [];
-    CONTEXT_PATTERNS.forEach(p => {
-      const matches = prompt.matchAll(p.regex);
-      for (const match of matches) {
-        contextTriggers.push({ type: p.type, rule: match[0] });
-      }
-    });
-
-    const skillMatches = LOCAL_SKILL_BANK.filter(s => new RegExp(s.pattern, 'i').test(prompt));
-    
-    // Identify potential NEW skills from constraints or boundaries
-    const suggestedSkills = [];
-    constraints.forEach(c => {
-        if (c.type === 'boundary' || c.type === 'explicit') {
-            suggestedSkills.push({
-                name: `Auto-create skill: "${c.rule}"`,
-                pattern: c.rule,
-                ref: `/${c.rule.toLowerCase().replace(/\s+/g, '-')}.md`
-            });
+    try {
+        // Attempt live LLM analysis if API key exists - with strict timeout
+        let llmResult = null;
+        if (typeof LLMService !== 'undefined' && LLMService.hasKey()) {
+            llmResult = await LLMService.analyzePrompt(prompt, history);
         }
-    });
 
-    // Re-build plan with full context for skill tagging
-    const finalExecutionPlan = buildExecutionPlan(
-        llmResult?.taskType || taskClassification.type, 
-        complexity, 
-        { constraints, contextTriggers, skillMatches }
-    );
+        const taskClassification = classifyTask(prompt);
+        const complexity = estimateComplexity(prompt, taskClassification.type);
+        const constraints = extractConstraints(prompt);
 
-    const optimizationProfile = getOptimizationProfile(
-        constraints, 
-        complexity.riskLevel, 
-        llmResult?.taskType || taskClassification.type, 
-        contextTriggers, 
-        skillMatches
-    );
-
-    let confidence = llmResult?.confidence || taskClassification.confidence;
-    if (contextTriggers.length > 0 || skillMatches.length > 0) confidence = Math.min(0.99, confidence + 0.1);
-
-    let reasoning = llmResult?.reasoning || '';
-    if (!reasoning) {
-        if (optimizationProfile.mode === 'agent') {
-            reasoning = "High cognitive load detected. Delegating to an agent loop reduces your manual overhead by 80%.";
-            if (skillMatches.length > 0) reasoning += " Verified matching skills in your local bank, further reducing decision risk.";
-            if (detectedPatterns.length > 0) reasoning += " I've identified a prompting pattern that could be optimized into a reusable skill.";
+        // Add task-specific system guardrails
+        if (taskClassification.type === 'simple_qa') {
+          constraints.push({ type: 'system', rule: 'Prioritize accuracy over length' });
+          constraints.push({ type: 'system', rule: 'Cite sources where applicable' });
         } else {
-            reasoning = "Predictable task. Direct execution avoids unnecessary agentic 'hallucination' and saves tokens.";
+          constraints.push({ type: 'system', rule: 'Will ask for review before modifying critical files' });
         }
-    }
+        
+        const contextTriggers = [];
+        CONTEXT_PATTERNS.forEach(p => {
+          const matches = prompt.matchAll(p.regex);
+          for (const match of matches) {
+            contextTriggers.push({ type: p.type, rule: match[0] });
+          }
+        });
 
-    if (contextTriggers.length > 0 && !llmResult) {
-      reasoning += ` I've identified context references that eliminate 'decision blind spots' regarding existing code.`;
-    }
+        const skillMatches = LOCAL_SKILL_BANK.filter(s => new RegExp(s.pattern, 'i').test(prompt));
+        
+        // Identify potential NEW skills from constraints or boundaries
+        const suggestedSkills = [];
+        constraints.forEach(c => {
+            if (c.type === 'boundary' || c.type === 'explicit') {
+                suggestedSkills.push({
+                    name: `Auto-create skill: "${c.rule}"`,
+                    pattern: c.rule,
+                    ref: `/${c.rule.toLowerCase().replace(/\s+/g, '-')}.md`
+                });
+            }
+        });
 
-    return {
-      id: 'pf_' + Date.now(),
-      prompt,
-      taskType: llmResult?.taskType || taskClassification.type,
-      taskLabel: llmResult?.taskLabel || taskClassification.label,
-      taskIcon: taskClassification.icon, // Keep heuristic icon for consistency
-      complexity,
-      constraints: llmResult?.constraints || constraints,
-      contextTriggers,
-      skillMatches,
-      suggestedSkills,
-      executionPlan: finalExecutionPlan,
-      optimizationProfile,
-      recommendation: {
-        mode: optimizationProfile.mode,
-        confidence,
-        reasoning
-      }
-    };
+        // Re-build plan with full context for skill tagging
+        const finalExecutionPlan = buildExecutionPlan(
+            llmResult?.taskType || taskClassification.type, 
+            complexity, 
+            { constraints, contextTriggers, skillMatches }
+        );
+
+        const optimizationProfile = getOptimizationProfile(
+            constraints, 
+            complexity.riskLevel, 
+            llmResult?.taskType || taskClassification.type, 
+            contextTriggers, 
+            skillMatches
+        );
+
+        let confidence = llmResult?.confidence || taskClassification.confidence;
+        if (contextTriggers.length > 0 || skillMatches.length > 0) confidence = Math.min(0.99, confidence + 0.1);
+
+        let reasoning = llmResult?.reasoning || '';
+        if (!reasoning) {
+            if (optimizationProfile.mode === 'agent') {
+                reasoning = "High cognitive load detected. Delegating to an agent loop reduces your manual overhead by 80%.";
+                if (skillMatches.length > 0) reasoning += " Verified matching skills in your local bank, further reducing decision risk.";
+                if (suggestedSkills.length > 0) reasoning += " I've identified a prompting pattern that could be optimized into a reusable skill.";
+            } else {
+                reasoning = "Predictable task. Direct execution avoids unnecessary agentic 'hallucination' and saves tokens.";
+            }
+        }
+
+        if (contextTriggers.length > 0 && !llmResult) {
+          reasoning += ` I've identified context references that eliminate 'decision blind spots' regarding existing code.`;
+        }
+
+        return {
+          id: 'pf_' + Date.now(),
+          prompt,
+          taskType: llmResult?.taskType || taskClassification.type,
+          taskLabel: llmResult?.taskLabel || taskClassification.label,
+          taskIcon: taskClassification.icon, // Keep heuristic icon for consistency
+          complexity,
+          constraints: llmResult?.constraints || constraints,
+          contextTriggers,
+          skillMatches,
+          suggestedSkills,
+          executionPlan: finalExecutionPlan,
+          optimizationProfile,
+          recommendation: {
+            mode: optimizationProfile.mode,
+            confidence,
+            reasoning
+          }
+        };
+    } catch (e) {
+        console.error('Critical Engine Error:', e);
+        // Absolute fallback to prevent UI hanging
+        return {
+            id: 'error_' + Date.now(),
+            prompt,
+            taskType: 'simple_qa',
+            taskLabel: 'Simple Question',
+            complexity: { stepCount: 1, riskLevel: 'low', estimatedTokens: 1000 },
+            constraints: [],
+            executionPlan: { steps: [{ action: 'Answer', desc: 'System fallback mode.' }], totalSteps: 1 },
+            optimizationProfile: { mode: 'manual', tokens: 10, quality: 70, latency: 10, bullets: ['Fallback mode engaged'] },
+            recommendation: { mode: 'manual', confidence: 0.5, reasoning: 'Engine encountered a critical error, falling back to manual mode for safety.' }
+        };
+    }
   }
 
   return { analyze, saveNewSkill };
