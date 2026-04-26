@@ -169,7 +169,8 @@ const PreFlightEngine = (function() {
       
       if (analysis && analysis.constraints && analysis.constraints.some(c => c.type === 'boundary')) {
         if (idx === template.length - 1) {
-           step.skillRef = '/strict-rules.md';
+           const skillMatch = analysis.skillMatches && analysis.skillMatches.length > 0 ? analysis.skillMatches[0].ref : '/boundary-skill.md';
+           step.skillRef = skillMatch;
            step.desc = `[Applying Guardrails] ${step.desc}`;
         }
       }

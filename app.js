@@ -20,6 +20,7 @@ const App = (function() {
   let currentAnalysis = null;
   let currentStepIndex = 0;
   let lastSubmittedPrompt = '';
+  let acceptedSkills = new Set();
 
   function init() {
     renderQuickPrompts();
@@ -67,6 +68,11 @@ const App = (function() {
       const editBtn = e.target.closest('.btn-edit-skill');
       if (editBtn) {
         editSkill(editBtn.dataset.ref);
+      }
+
+      const acceptBtn = e.target.closest('.btn-accept-skill');
+      if (acceptBtn) {
+        acceptSkill(acceptBtn.dataset.ref);
       }
     });
   }
@@ -187,9 +193,13 @@ const App = (function() {
                 <span style="color:rgba(46,105,75,0.7); font-size:12px;">based on your operational preferences.</span>
               </div>
               <div style="display:flex; gap:8px;">
-                <button class="btn-nudge-action btn-discard-skill" style="padding:4px 10px; font-size:11px; background:transparent; border:1px solid #3D8B63; color:#3D8B63; border-radius:6px; cursor:pointer;" data-ref="${analysis.skillMatches[0].ref}">Discard</button>
-                <button class="btn-nudge-action btn-edit-skill" style="padding:4px 10px; font-size:11px; background:transparent; border:1px solid #3D8B63; color:#3D8B63; border-radius:6px; cursor:pointer;" data-ref="${analysis.skillMatches[0].ref}">Edit</button>
-                <button style="padding:4px 10px; font-size:11px; background:#3D8B63; border:1px solid #3D8B63; color:white; border-radius:6px; cursor:default; opacity:0.8;">Active</button>
+                ${acceptedSkills.has(analysis.skillMatches[0].ref) ? `
+                  <span style="background:#3D8B63; color:white; padding:4px 12px; border-radius:6px; font-size:11px; font-weight:700;">Confirmed</span>
+                ` : `
+                  <button class="btn-nudge-action btn-discard-skill" style="padding:4px 10px; font-size:11px; background:transparent; border:1px solid #3D8B63; color:#3D8B63; border-radius:6px; cursor:pointer;" data-ref="${analysis.skillMatches[0].ref}">Discard</button>
+                  <button class="btn-nudge-action btn-edit-skill" style="padding:4px 10px; font-size:11px; background:transparent; border:1px solid #3D8B63; color:#3D8B63; border-radius:6px; cursor:pointer;" data-ref="${analysis.skillMatches[0].ref}">Edit</button>
+                  <button class="btn-nudge-action btn-accept-skill" style="padding:4px 10px; font-size:11px; background:#3D8B63; border:1px solid #3D8B63; color:white; border-radius:6px; cursor:pointer;" data-ref="${analysis.skillMatches[0].ref}">Accept</button>
+                `}
               </div>
             </div>
           ` : ''}
@@ -491,9 +501,15 @@ const App = (function() {
     const newName = prompt("Edit Skill Name:", ref.replace('.md', '').substring(1));
     if (newName) {
         alert(`Skill updated to: ${newName}. Re-analyzing...`);
-        // In a real app, we would update the storage here
         reset(lastSubmittedPrompt);
     }
+  }
+
+  function acceptSkill(ref) {
+    acceptedSkills.add(ref);
+    // Silent re-render to update the nudge UI
+    DOM.messagesArea.innerHTML = '';
+    renderPreFlightCard(currentAnalysis);
   }
 
   function scrollToBottom() {
