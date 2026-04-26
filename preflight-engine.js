@@ -141,23 +141,9 @@ const PreFlightEngine = (function() {
   }
 
   function getOptimizationProfile(constraints, riskLevel, taskType) {
-    const hasBoundary = constraints.some(c => c.type === 'boundary');
+    const isHighRiskOrMultiStep = riskLevel === 'high' || taskType === 'multi_step';
     
-    if (hasBoundary) {
-      return {
-        description: "Strong deterministic boundaries detected. Automatically generating a reusable Skill to minimize future token cost and lock in execution behavior.",
-        tokens: 25,
-        quality: 95,
-        latency: 15,
-        bullets: [
-          "Bypass exploratory planning",
-          "Auto-generate reusable Workflow/Skill",
-          "Strictly adhere to negative constraints"
-        ],
-        mode: "skill",
-        profileType: "skill"
-      };
-    } else if (riskLevel === 'high' || taskType === 'multi_step') {
+    if (isHighRiskOrMultiStep) {
       return {
         description: "Multi-step or high-stakes work — I'll trade tokens & time for correctness.",
         tokens: 35,
@@ -211,11 +197,9 @@ const PreFlightEngine = (function() {
     const optimizationProfile = getOptimizationProfile(constraints, complexity.riskLevel, taskClassification.type);
 
     let confidence = taskClassification.confidence;
-    if (optimizationProfile.mode === 'skill') confidence = 0.95;
 
     let reasoning = '';
-    if (optimizationProfile.mode === 'skill') reasoning = "You have defined deterministic boundaries in your prompt. Instead of relying on an exploratory Agent, it is highly recommended to save this context as a Skill or Workflow Template to guarantee consistent, token-efficient execution.";
-    else if (optimizationProfile.mode === 'agent') reasoning = "Iterative coding tasks suit an agent loop with verification.";
+    if (optimizationProfile.mode === 'agent') reasoning = "Iterative coding tasks suit an agent loop with verification.";
     else reasoning = "Direct querying is best for simple knowledge retrieval.";
 
     return {

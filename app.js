@@ -87,7 +87,7 @@ const App = (function() {
     let html = `<div class="message" style="flex-direction: column; align-items: center; gap: 8px; width: 100%;">`;
     
     // User bubble
-    html += `<div class="message-user" style="background:#D96C51; color:white; padding:12px 24px; border-radius:24px; font-size:14px; max-width:90%; text-align:center; z-index: 10; position:relative; box-shadow: 0 4px 12px rgba(217, 108, 81, 0.2); margin-bottom: -16px;">${analysis.prompt}</div>`;
+    html += `<div class="message-user" style="background:#D96C51; color:white; padding:12px 24px; border-radius:24px; font-size:14px; max-width:90%; text-align:center; z-index: 10; position:relative; box-shadow: 0 4px 12px rgba(217, 108, 81, 0.2); margin-bottom: 24px;">${analysis.prompt}</div>`;
 
     html += `<div class="preflight-card" style="width: 100%; max-width: 680px; background: white; border: 1px solid var(--border-light); border-radius: 16px; box-shadow: 0 4px 24px rgba(0,0,0,0.04); position:relative;">`;
 
@@ -142,12 +142,32 @@ const App = (function() {
 
     if (constraints.length > 0) {
       html += `<div class="pf-section" style="border-bottom: none; padding-bottom: 12px;">
-        <div class="pf-section-title">CONSTRAINTS I'LL HONOR</div>`;
+        <div class="pf-section-title">DETERMINISM BOUNDARIES</div>
+        <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 12px;">Techniques I'll apply to make a non-deterministic agent behave predictably.</div>`;
+      
       constraints.forEach(c => {
-        html += `<div class="constraint-item">
-          <span class="constraint-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg></span>
-          <span>${c.rule}</span>
-        </div>`;
+        if (c.type === 'boundary') {
+          html += `<div class="constraint-item" style="background: rgba(217, 108, 81, 0.05); border: 1px solid rgba(217, 108, 81, 0.2); padding: 16px; border-radius: 12px; align-items: flex-start; flex-direction: column; gap: 12px;">
+            <div style="display: flex; gap: 12px; align-items: center; width: 100%;">
+              <span class="constraint-icon" style="background: var(--accent-orange); color: white; width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg></span>
+              <div style="flex: 1;">
+                <div style="font-weight: 600; color: var(--text-main); font-size: 14px; display: flex; align-items: center; gap: 8px;">Auto-create a reusable skill <span style="background: #E5E5E5; color: #555; font-size: 9px; padding: 2px 6px; border-radius: 4px; font-weight: 700; letter-spacing: 0.5px;">SKILL</span></div>
+                <div style="font-size: 13px; color: var(--text-muted); margin-top: 4px;">"${c.rule}"</div>
+              </div>
+              <button style="background: white; border: 1px solid var(--accent-orange); color: var(--accent-orange); padding: 6px 12px; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 12px; white-space: nowrap;">
+                Save as /skill
+              </button>
+            </div>
+            <div style="font-size: 13px; color: var(--text-muted); background: white; padding: 10px 12px; border-radius: 8px; width: 100%; border: 1px solid var(--border-light);">
+              <strong style="color: var(--text-main);">Why this recommendation:</strong> You have defined deterministic boundaries in your prompt. I will package this constraint as a saved skill so future runs apply it deterministically — no re-derivation.
+            </div>
+          </div>`;
+        } else {
+          html += `<div class="constraint-item">
+            <span class="constraint-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg></span>
+            <span>${c.rule}</span>
+          </div>`;
+        }
       });
       html += `</div>`;
     }
