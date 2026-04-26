@@ -54,9 +54,19 @@ const App = (function() {
   
   function bindDelegateEvents() {
     DOM.messagesArea.addEventListener('click', (e) => {
-      const btn = e.target.closest('.btn-save-skill');
-      if (btn && !btn.disabled) {
-        saveSkill(btn, btn.dataset.name, btn.dataset.pattern, btn.dataset.ref);
+      const saveBtn = e.target.closest('.btn-save-skill');
+      if (saveBtn && !saveBtn.disabled) {
+        saveSkill(saveBtn, saveBtn.dataset.name, saveBtn.dataset.pattern, saveBtn.dataset.ref);
+      }
+      
+      const discardBtn = e.target.closest('.btn-discard-skill');
+      if (discardBtn) {
+        discardSkill(discardBtn.dataset.ref);
+      }
+      
+      const editBtn = e.target.closest('.btn-edit-skill');
+      if (editBtn) {
+        editSkill(editBtn.dataset.ref);
       }
     });
   }
@@ -171,8 +181,13 @@ const App = (function() {
               <div style="width:24px; height:24px; background:#3D8B63; color:white; border-radius:50%; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"></polyline></svg>
               </div>
-              <div style="font-size:13px; color:#2E694B; font-weight:500;">
-                <span style="font-weight:700;">Intelligence applied:</span> Using <strong>${analysis.skillMatches[0].ref.replace('.md', '')}</strong> to optimize this process based on your habits.
+              <div style="font-size:13px; color:#2E694B; font-weight:500; flex:1;">
+                <span style="font-weight:700;">Intelligence applied:</span> Using <strong>${analysis.skillMatches[0].ref.replace('.md', '')}</strong> to optimize this process.
+              </div>
+              <div style="display:flex; gap:8px;">
+                <button class="btn-nudge-action btn-discard-skill" style="padding:4px 10px; font-size:11px; background:transparent; border:1px solid #3D8B63; color:#3D8B63; border-radius:6px; cursor:pointer;" data-ref="${analysis.skillMatches[0].ref}">Discard</button>
+                <button class="btn-nudge-action btn-edit-skill" style="padding:4px 10px; font-size:11px; background:transparent; border:1px solid #3D8B63; color:#3D8B63; border-radius:6px; cursor:pointer;" data-ref="${analysis.skillMatches[0].ref}">Edit</button>
+                <button style="padding:4px 10px; font-size:11px; background:#3D8B63; border:1px solid #3D8B63; color:white; border-radius:6px; cursor:default; opacity:0.8;">Active</button>
               </div>
             </div>
           ` : ''}
@@ -453,13 +468,8 @@ const App = (function() {
     
     // Instant re-analysis using the stored prompt
     setTimeout(async () => {
-        // Show loading state in the card area briefly
         const card = document.querySelector('.preflight-card');
-        if (card) {
-            card.style.opacity = '0.5';
-            card.style.pointerEvents = 'none';
-        }
-        
+        if (card) { card.style.opacity = '0.5'; }
         currentAnalysis = await PreFlightEngine.analyze(lastSubmittedPrompt);
         DOM.messagesArea.innerHTML = '';
         renderPreFlightCard(currentAnalysis);
@@ -467,11 +477,28 @@ const App = (function() {
     }, 600);
   }
 
+  function discardSkill(ref) {
+    if (!currentAnalysis) return;
+    // For this prototype, we'll just re-analyze with a flag or just skip the match in the engine
+    // Real implementation would have a transient 'ignored_skills' list
+    alert(`Ignoring ${ref} for this task. Re-optimizing...`);
+    reset(lastSubmittedPrompt);
+  }
+
+  function editSkill(ref) {
+    const newName = prompt("Edit Skill Name:", ref.replace('.md', '').substring(1));
+    if (newName) {
+        alert(`Skill updated to: ${newName}. Re-analyzing...`);
+        // In a real app, we would update the storage here
+        reset(lastSubmittedPrompt);
+    }
+  }
+
   function scrollToBottom() {
     window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
   }
 
-  return { init, runAgent, runManual, continueExecution, reset, modifyPrompt, saveSkill };
+  return { init, runAgent, runManual, continueExecution, reset, modifyPrompt, saveSkill, discardSkill, editSkill };
 })();
 
 document.addEventListener('DOMContentLoaded', App.init);
