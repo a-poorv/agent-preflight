@@ -189,7 +189,7 @@ const App = (function() {
               </div>
               <div style="font-size:13px; color:#2E694B; font-weight:500; flex:1; display:flex; align-items:center; gap:8px;">
                 <span style="font-weight:700;">Intelligence applied:</span>
-                <span style="background:black; color:white; padding:2px 8px; border-radius:4px; font-family:var(--font-mono); font-size:11px; letter-spacing:0.5px;">${analysis.skillMatches[0].ref.toUpperCase()}</span>
+                <span style="background:black; color:white; padding:2px 8px; border-radius:4px; font-family:var(--font-mono); font-size:11px; letter-spacing:0.5px;">${analysis.skillMatches[0].ref.replace('.md', '').toUpperCase()}.md</span>
                 <span style="color:rgba(46,105,75,0.7); font-size:12px;">based on your operational preferences.</span>
               </div>
               <div style="display:flex; gap:8px;">
