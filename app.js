@@ -93,7 +93,7 @@ const App = (function() {
 
     const recBadgeText = recommendation.mode === 'skill' ? 'Skill recommended' : recommendation.mode === 'agent' ? 'Agent recommended' : 'Manual mode';
     
-    html += `<div class="pf-header" style="background: #FAF8F2; padding: 24px 24px 20px; border-top-left-radius: 16px; border-top-right-radius: 16px; border-bottom: 1px solid var(--border-light);">
+    html += `<div class="pf-header" style="display: block; background: #FAF8F2; padding: 24px 24px 20px; border-top-left-radius: 16px; border-top-right-radius: 16px; border-bottom: 1px solid var(--border-light);">
       <div style="display: flex; justify-content: space-between; align-items: flex-start;">
         <div style="display: flex; gap: 16px; align-items: center;">
           <div style="width: 48px; height: 48px; background: ${analysis.color || '#ECA335'}; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
@@ -104,7 +104,7 @@ const App = (function() {
             <h3 style="font-family: var(--font-serif); font-size: 28px; font-weight: 500; color: var(--text-main); margin: 0;">${analysis.taskLabel}</h3>
           </div>
         </div>
-        <div style="background: ${optimizationProfile && optimizationProfile.profileType === 'quality' ? 'var(--accent-orange)' : '#D96C51'}; color: white; font-size: 12px; font-weight: 600; padding: 6px 14px; border-radius: 20px;">${recBadgeText}</div>
+        <div style="background: ${optimizationProfile && optimizationProfile.profileType === 'quality' ? 'var(--accent-orange)' : '#D96C51'}; color: white; font-size: 12px; font-weight: 600; padding: 6px 14px; border-radius: 20px; white-space: nowrap; flex-shrink: 0;">${recBadgeText}</div>
       </div>
       <div style="margin-top: 20px; font-size: 14px; color: var(--text-muted);">
         A ${analysis.taskLabel.toLowerCase()} of ${complexity.contextLoad} scope — ${recommendation.reasoning.split('.')[0]}.
@@ -169,7 +169,6 @@ const App = (function() {
           </span>
         </div>
         <div class="opt-profile">
-          <div class="opt-desc">${optimizationProfile.description}</div>
           <div class="opt-bars">
             <div class="opt-bar">
               <div class="opt-bar-header"><span>TOKENS</span><span>${optimizationProfile.tokens}</span></div>
