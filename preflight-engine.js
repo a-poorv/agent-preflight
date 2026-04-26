@@ -156,18 +156,19 @@ const PreFlightEngine = (function() {
         ],
         mode: "skill"
       };
-    } else if (riskLevel === 'high') {
+    } else if (riskLevel === 'high' || taskType === 'multi_step') {
       return {
-        description: "High-risk operations detected. Prioritizing quality and safety over speed and token usage.",
-        tokens: 85,
+        description: "Multi-step or high-stakes work — I'll trade tokens & time for correctness.",
+        tokens: 35,
         quality: 95,
-        latency: 80,
+        latency: 40,
         bullets: [
-          "Extensive pre-execution planning",
-          "Mandatory user checkpoints",
-          "Verify state after each destructive op"
+          "Read full context before editing",
+          "Self-verify with build / tests after each change",
+          "Generate multiple candidate solutions, pick the best",
+          "Pause at checkpoints for your review"
         ],
-        mode: "agent"
+        mode: "quality"
       };
     } else if (taskType === 'simple_qa') {
       return {
