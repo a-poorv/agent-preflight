@@ -12,14 +12,18 @@ const PreFlightEngine = (function() {
 
   const CONSTRAINT_PATTERNS = [
     { regex: /only\s+(use|modify|change|edit)\s+(.+)/gi, type: 'explicit' },
-    { regex: /keep\s+(.+?)\s+(unchanged|intact|as is)/gi, type: 'explicit' },
+    { regex: /keep\s+(.+?)\s+(unchanged|intact|as is|original)/gi, type: 'explicit' },
     { regex: /preserve\s+(.+)/gi, type: 'boundary' },
-    { regex: /without\s+(breaking|changing|modifying)\s+(.+)/gi, type: 'boundary' },
-    { regex: /don'?t\s+break\s+(.+)/gi, type: 'boundary' },
-    { regex: /no\s+(code\s+changes|modifications)/gi, type: 'boundary' },
-    { regex: /propose\s+(?:multiple|optimized|few|2-3|several|\s)+\s*(solutions|options|variants)/gi, type: 'explicit' },
+    { regex: /without\s+(breaking|changing|modifying|altering)\s+(.+)/gi, type: 'boundary' },
+    { regex: /don'?t\s+(break|change|modify|edit|alter|touch|affect)\s+(.+)/gi, type: 'boundary' },
+    { regex: /avoid\s+(.+)/gi, type: 'boundary' },
+    { regex: /ensure\s+(.+)/gi, type: 'explicit' },
+    { regex: /make\s+sure\s+(.+)/gi, type: 'explicit' },
+    { regex: /no\s+(code\s+changes|modifications|edits|updates)\s+to\s+(.+)/gi, type: 'boundary' },
+    { regex: /propose\s+(?:multiple|optimized|few|2-3|several|\s)+\s*(solutions|options|variants|paths)/gi, type: 'explicit' },
     { regex: /must\s+(not|remain|stay|keep)\s+(.+)/gi, type: 'explicit' },
-    { regex: /no\s+(new dependencies|external|third.party)/gi, type: 'explicit' }
+    { regex: /no\s+(new dependencies|external|third.party|changes to existing)/gi, type: 'explicit' },
+    { regex: /(.+?)\s+(behavior|logic|flow|style)\s+must\s+remain/gi, type: 'boundary' }
   ];
 
   // Initialize local skill bank from storage or defaults
