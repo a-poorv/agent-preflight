@@ -54,11 +54,13 @@ const PreFlightEngine = (() => {
 
   // ===== CONSTRAINT PATTERNS =====
   const CONSTRAINT_PATTERNS = [
-    { regex: /don'?t\s+(modify|change|touch|edit|delete|remove|alter)\s+(.+)/gi, type: 'explicit' },
+    { regex: /don'?t\s+(modify|change|touch|edit|delete|remove|alter|break)\s+(.+)/gi, type: 'boundary' },
+    { regex: /no\s+(code changes|modifications|deletions)/gi, type: 'boundary' },
+    { regex: /optimize\s+(.+)/gi, type: 'implicit' },
     { regex: /only\s+(use|modify|change|edit)\s+(.+)/gi, type: 'explicit' },
     { regex: /keep\s+(.+?)\s+(unchanged|intact|as is)/gi, type: 'explicit' },
-    { regex: /preserve\s+(.+)/gi, type: 'explicit' },
-    { regex: /without\s+(breaking|changing|modifying)\s+(.+)/gi, type: 'implicit' },
+    { regex: /preserve\s+(.+)/gi, type: 'boundary' },
+    { regex: /without\s+(breaking|changing|modifying)\s+(.+)/gi, type: 'boundary' },
     { regex: /make sure\s+(.+)/gi, type: 'explicit' },
     { regex: /must\s+(not|remain|stay|keep)\s+(.+)/gi, type: 'explicit' },
     { regex: /no\s+(new dependencies|external|third.party)/gi, type: 'explicit' }

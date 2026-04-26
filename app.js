@@ -222,7 +222,7 @@
             <span>Risk: ${capitalize(step.risk)}</span>
           </div>
         </div>
-        ${step.checkpoint ? '<span class="step-checkpoint-badge">⏸ CHECKPOINT</span>' : ''}
+        ${step.checkpoint ? '<span class="step-checkpoint-badge">⏸ USER APPROVAL REQUIRED</span>' : ''}
       </div>`;
     });
     html += `</div></div>`;
@@ -233,9 +233,16 @@
         <div class="preflight-section-title">CONSTRAINTS DETECTED</div>
         <div class="constraint-list">`;
       constraints.forEach(c => {
-        const icon = c.type === 'explicit' ? '🔒' : c.type === 'implicit' ? '💡' : '⚙️';
-        html += `<div class="constraint-item"><span class="constraint-icon">${icon}</span>${c.rule}</div>`;
+        const isBoundary = c.type === 'boundary';
+        const icon = isBoundary ? '🛑' : (c.type === 'explicit' ? '🔒' : c.type === 'implicit' ? '💡' : '⚙️');
+        const cClass = isBoundary ? 'constraint-item boundary' : 'constraint-item';
+        let ruleHtml = isBoundary ? `<strong>AGENT BOUNDARY:</strong> ${c.rule}` : c.rule;
+        html += `<div class="${cClass}"><span class="constraint-icon">${icon}</span><div>${ruleHtml}</div></div>`;
       });
+      const hasBoundaries = constraints.some(c => c.type === 'boundary');
+      if (hasBoundaries) {
+        html += `<div class="constraint-item boundary" style="margin-top: 6px; font-size: 11.5px; opacity: 0.9"><span class="constraint-icon">🪄</span><div><em>Suggestion: To enforce these boundaries reliably across sessions, consider saving them as a <strong>Skill</strong> or <strong>Token Optimization Rule</strong>.</em></div></div>`;
+      }
       html += `</div></div>`;
     }
 
@@ -253,7 +260,7 @@
     // Action Buttons
     html += `<div class="preflight-actions">
       <button class="btn btn-primary" id="btn-proceed">▶ Proceed with Agent</button>
-      <button class="btn btn-secondary" id="btn-modify">✏️ Modify Plan</button>
+      <button class="btn btn-secondary" id="btn-modify">✏️ Modify Instructions</button>
       <button class="btn btn-ghost" id="btn-manual">📝 Use Manual Mode</button>
     </div>`;
 
