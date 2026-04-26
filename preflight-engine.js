@@ -154,7 +154,8 @@ const PreFlightEngine = (function() {
           "Auto-generate reusable Workflow/Skill",
           "Strictly adhere to negative constraints"
         ],
-        mode: "skill"
+        mode: "skill",
+        profileType: "skill"
       };
     } else if (riskLevel === 'high' || taskType === 'multi_step') {
       return {
@@ -168,7 +169,8 @@ const PreFlightEngine = (function() {
           "Generate multiple candidate solutions, pick the best",
           "Pause at checkpoints for your review"
         ],
-        mode: "quality"
+        mode: "agent",
+        profileType: "quality"
       };
     } else if (taskType === 'simple_qa') {
       return {
@@ -180,7 +182,8 @@ const PreFlightEngine = (function() {
           "Direct single-shot response",
           "No planning phase required"
         ],
-        mode: "manual"
+        mode: "manual",
+        profileType: "speed"
       };
     } else {
       return {
@@ -193,7 +196,8 @@ const PreFlightEngine = (function() {
           "Verify only critical changes",
           "Ask before destructive ops"
         ],
-        mode: "agent"
+        mode: "agent",
+        profileType: "balanced"
       };
     }
   }

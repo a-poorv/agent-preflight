@@ -97,7 +97,7 @@ const App = (function() {
           <h3>${analysis.taskLabel}</h3>
         </div>
       </div>
-      <div class="pf-badge" style="${optimizationProfile && optimizationProfile.mode === 'quality' ? 'background:var(--accent-orange);' : ''}">${recBadgeText}</div>
+      <div class="pf-badge" style="${optimizationProfile && optimizationProfile.profileType === 'quality' ? 'background:var(--accent-orange);' : ''}">${recBadgeText}</div>
     </div>`;
 
     html += `<div class="pf-subtitle">This looks like a ${complexity.contextLoad}-complexity ${analysis.taskLabel.toLowerCase()} task — ${recommendation.reasoning.split('.')[0]}.</div>`;
@@ -137,8 +137,8 @@ const App = (function() {
     if (optimizationProfile) {
       let optLabel = 'Balanced';
       let optClass = 'opt-badge-balanced';
-      if (optimizationProfile.mode === 'skill') { optLabel = 'Efficiency'; }
-      if (optimizationProfile.mode === 'quality') { optLabel = 'Quality-optimized'; optClass = 'opt-badge-quality'; }
+      if (optimizationProfile.profileType === 'skill') { optLabel = 'Efficiency'; }
+      if (optimizationProfile.profileType === 'quality') { optLabel = 'Quality-optimized'; optClass = 'opt-badge-quality'; }
 
       const badgeBg = optClass === 'opt-badge-quality' ? 'var(--accent-orange)' : '#F3F1EB';
       const badgeColor = optClass === 'opt-badge-quality' ? '#FFF' : 'var(--text-main)';
@@ -273,11 +273,7 @@ const App = (function() {
     currentStepIndex = 0;
     
     const container = document.querySelector('.preflight-card').parentNode;
-    
-    // Add the top badge seen in screenshots
-    const topBadge = `<div style="text-align:center; margin-bottom:16px;"><span style="background:var(--accent-orange); color:white; padding:6px 16px; border-radius:24px; font-size:13px; font-weight:500;">${currentAnalysis.prompt}</span></div>`;
-    
-    container.innerHTML = topBadge + renderAgentRunningCard(currentAnalysis, 'running');
+    container.innerHTML = renderAgentRunningCard(currentAnalysis, 'running');
     scrollToBottom();
     
     simulateExecution();
@@ -290,8 +286,7 @@ const App = (function() {
         if (currentStepIndex >= steps.length) {
             isExecuting = false;
             const container = document.querySelector('.agent-running-card').parentNode;
-            const topBadge = `<div style="text-align:center; margin-bottom:16px;"><span style="background:var(--accent-orange); color:white; padding:6px 16px; border-radius:24px; font-size:13px; font-weight:500;">${currentAnalysis.prompt}</span></div>`;
-            container.innerHTML = topBadge + renderAgentRunningCard(currentAnalysis, 'complete');
+            container.innerHTML = renderAgentRunningCard(currentAnalysis, 'complete');
             scrollToBottom();
             return;
         }
