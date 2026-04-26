@@ -248,13 +248,14 @@ const PreFlightEngine = (function() {
         }
         
         // 2. Identify Task Type (Merge LLM finding with Heuristic)
-        const typeKey = llmResult?.type || Object.keys(TASK_PATTERNS).find(key => 
-            TASK_PATTERNS[key].keywords.some(k => prompt.toLowerCase().includes(k))
-        ) || 'code_gen';
-        
+        const heuristicClassification = classifyTask(prompt);
+        const typeKey = llmResult?.type || heuristicClassification.type || 'code_gen';
         const typeConfig = TASK_PATTERNS[typeKey] || TASK_PATTERNS.code_gen;
 
-        // 3. Extract Constraints (Heuristic + LLM bifurcation)
+        // 3. Complexity Estimation
+        const complexity = estimateComplexity(prompt, typeKey);
+
+        // 4. Extract Constraints (Heuristic + LLM bifurcation)
         let constraints = extractConstraints(prompt);
         if (llmResult?.constraints) {
             llmResult.constraints.forEach(rule => {
@@ -310,7 +311,7 @@ const PreFlightEngine = (function() {
 
         // Re-build plan with full context for skill tagging
         const finalExecutionPlan = buildExecutionPlan(
-            llmResult?.taskType || taskClassification.type, 
+            typeKey, 
             complexity, 
             { constraints, contextTriggers, skillMatches }
         );
@@ -318,7 +319,7 @@ const PreFlightEngine = (function() {
         const optimizationProfile = getOptimizationProfile(
             constraints, 
             complexity.riskLevel, 
-            llmResult?.taskType || taskClassification.type, 
+            typeKey, 
             contextTriggers, 
             skillMatches
         );
@@ -344,11 +345,11 @@ const PreFlightEngine = (function() {
         return {
           id: 'pf_' + Date.now(),
           prompt,
-          taskType: llmResult?.taskType || taskClassification.type,
-          taskLabel: llmResult?.taskLabel || taskClassification.label,
-          taskIcon: taskClassification.icon, // Keep heuristic icon for consistency
+          taskType: typeKey,
+          taskLabel: typeConfig.label,
+          taskIcon: typeConfig.icon, 
           complexity,
-          constraints: llmResult?.constraints || constraints,
+          constraints: constraints,
           contextTriggers,
           skillMatches,
           suggestedSkills,
