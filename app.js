@@ -166,6 +166,17 @@ const App = (function() {
         <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 16px;">Strict rules I will follow to keep this agent on track.</div>
         
         <div style="display:flex; flex-direction:column; gap:16px;">
+          ${analysis.skillMatches && analysis.skillMatches.length > 0 ? `
+            <div class="skill-nudge" style="padding:16px; background:#EBF4EF; border:1px solid #D1E7DD; border-radius:16px; display:flex; align-items:center; gap:12px; margin-bottom: 8px;">
+              <div style="width:24px; height:24px; background:#3D8B63; color:white; border-radius:50%; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"></polyline></svg>
+              </div>
+              <div style="font-size:13px; color:#2E694B; font-weight:500;">
+                <span style="font-weight:700;">Intelligence applied:</span> Using <strong>/${analysis.skillMatches[0].ref.replace('.md', '')}</strong> to optimize this process based on your habits.
+              </div>
+            </div>
+          ` : ''}
+          
           ${analysis.suggestedSkills && analysis.suggestedSkills.length > 0 ? `
             <div class="skill-suggestion-card" style="padding:24px; background:rgba(217,108,81,0.03); border:1px solid rgba(217,108,81,0.12); border-radius:24px; margin-bottom: 24px;">
               <div style="display:flex; gap:16px; align-items:flex-start;">
@@ -436,7 +447,7 @@ const App = (function() {
     
     btn.innerHTML = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"></polyline></svg> Skill added`;
     btn.style.background = '#EBF4EF';
-    btn.style.color = 'white';
+    btn.style.color = '#3D8B63';
     btn.style.borderColor = 'var(--accent-green)';
     btn.disabled = true;
     
