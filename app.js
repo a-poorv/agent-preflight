@@ -219,31 +219,34 @@ const App = (function() {
       const badgeColor = optClass === 'opt-badge-quality' ? '#FFF' : 'var(--text-main)';
 
       html += `<div class="pf-section" style="padding-top: 0;">
-        <div class="pf-section-title" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-          OPTIMIZATION PROFILE
-          <span style="background: ${badgeBg}; color: ${badgeColor}; padding: 4px 8px; border-radius: 6px; display: flex; align-items: center; gap: 4px; text-transform: none; font-size: 11px; font-weight: 600;">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v18M3 12h18"></path></svg> ${optLabel}
-          </span>
-        </div>
-        <div class="opt-profile">
-          <div class="opt-bars">
-            <div class="opt-bar">
-              <div class="opt-bar-header"><span>TOKENS</span><span>${optimizationProfile.tokens}</span></div>
-              <div class="bar-track"><div class="bar-fill" style="width: ${optimizationProfile.tokens}%"></div></div>
+        <details style="border: 1px solid var(--border-light); border-radius: 16px; padding: 16px; background: #fff;">
+          <summary style="list-style: none; cursor: pointer; display: flex; justify-content: space-between; align-items: center; font-size: 12px; font-weight: 700; color: var(--text-muted); letter-spacing: 0.5px;">
+            OPTIMIZATION PROFILE
+            <span style="background: ${badgeBg}; color: ${badgeColor}; padding: 4px 10px; border-radius: 8px; display: flex; align-items: center; gap: 4px; text-transform: none; font-size: 11px; font-weight: 700;">
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M12 5v14M5 12h14"></path></svg> ${optLabel}
+            </span>
+          </summary>
+          <div style="margin-top: 20px;">
+            <div class="opt-bars">
+              <div class="opt-bar">
+                <div class="opt-bar-header"><span>TOKENS</span><span>${optimizationProfile.tokens}</span></div>
+                <div class="bar-track"><div class="bar-fill" style="width: ${optimizationProfile.tokens}%"></div></div>
+              </div>
+              <div class="opt-bar">
+                <div class="opt-bar-header"><span>QUALITY</span><span>${optimizationProfile.quality}</span></div>
+                <div class="bar-track"><div class="bar-fill" style="width: ${optimizationProfile.quality}%"></div></div>
+              </div>
+              <div class="opt-bar">
+                <div class="opt-bar-header"><span>LATENCY</span><span>${optimizationProfile.latency}</span></div>
+                <div class="bar-track"><div class="bar-fill" style="width: ${optimizationProfile.latency}%"></div></div>
+              </div>
             </div>
-            <div class="opt-bar">
-              <div class="opt-bar-header"><span>QUALITY</span><span>${optimizationProfile.quality}</span></div>
-              <div class="bar-track"><div class="bar-fill" style="width: ${optimizationProfile.quality}%"></div></div>
-            </div>
-            <div class="opt-bar">
-              <div class="opt-bar-header"><span>LATENCY</span><span>${optimizationProfile.latency}</span></div>
-              <div class="bar-track"><div class="bar-fill" style="width: ${optimizationProfile.latency}%"></div></div>
-            </div>
+            <ul class="opt-bullets">
+              ${optimizationProfile.bullets.map(b => `<li>${b}</li>`).join('')}
+            </ul>
           </div>
-          <ul class="opt-bullets">
-            ${optimizationProfile.bullets.map(b => `<li>${b}</li>`).join('')}
-          </ul>
-        </div>`;
+        </details>
+      </div>`;
 
     }
 
@@ -431,8 +434,8 @@ const App = (function() {
   async function saveSkill(btn, name, pattern, ref) {
     PreFlightEngine.saveNewSkill(name, pattern, ref);
     
-    btn.innerHTML = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"></polyline></svg> Saved`;
-    btn.style.background = 'var(--accent-green)';
+    btn.innerHTML = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"></polyline></svg> Skill added`;
+    btn.style.background = '#EBF4EF';
     btn.style.color = 'white';
     btn.style.borderColor = 'var(--accent-green)';
     btn.disabled = true;
