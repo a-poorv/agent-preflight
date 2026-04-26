@@ -231,34 +231,30 @@ const App = (function() {
           </ul>
         </div>`;
 
-      if (optimizationProfile.mode === 'skill') {
-        html += `<div style="margin-top:24px;">
-          <div class="pf-section-title">EXECUTION GUARDRAILS</div>
-          <div style="font-size:13px; color:var(--text-muted); margin-bottom:12px;">Strict rules I will follow to keep this agent on track.</div>
-          
-          <div style="border:1px solid var(--border-light); border-radius:var(--radius-md); padding:16px; display:flex; gap:16px; background:#fff; align-items: flex-start;">
-            <div style="width:32px; height:32px; background:var(--accent-orange); color:#fff; border-radius:50%; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
-            </div>
-            <div style="flex: 1;">
-              <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:8px;">
-                <div style="display:flex; align-items:center; gap:8px;">
-                  <h4 style="font-size:14px; margin:0;">Auto-create a reusable skill</h4>
-                  <span style="font-size:9px; font-weight:700; background:#F3F1EB; padding:2px 6px; border-radius:4px; border:1px solid #EBE8E0;">SKILL</span>
-                </div>
-                <button style="background: white; border: 1px solid var(--accent-orange); color: var(--accent-orange); padding: 4px 10px; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 11px; white-space: nowrap;">
-                  Save as /skill
-                </button>
+    // Pattern Detection Card (Intelligent Suggestion)
+    if (analysis.detectedPatterns && analysis.detectedPatterns.length > 0) {
+      html += `<div class="pf-pattern-card" style="margin:24px 0; padding:20px; background:rgba(217,108,81,0.04); border:1px dashed var(--accent-orange); border-radius:16px; display:flex; gap:16px; align-items:flex-start;">
+          <div style="font-size:24px;">💡</div>
+          <div style="flex:1;">
+              <h4 style="margin:0 0 4px 0; font-size:15px; font-weight:700; color:var(--accent-orange);">Operational Pattern Detected</h4>
+              <p style="margin:0; font-size:13px; color:var(--text-muted); line-height:1.5;">
+                  You frequently request <strong>${analysis.detectedPatterns.map(p => p.label).join(', ')}</strong>. 
+                  Saving this as a <strong>Reusable Skill</strong> would reduce your future prompt length by ~20% and ensure consistent agent behavior.
+              </p>
+              <div style="margin-top:12px; display:flex; gap:8px;">
+                  <button class="btn btn-secondary" style="padding:6px 12px; font-size:12px; border-color:var(--accent-orange); color:var(--accent-orange); background:white;">+ Save as Skill</button>
+                  <button class="btn btn-ghost" style="padding:6px 12px; font-size:12px;">Dismiss</button>
               </div>
-              <div style="font-size:10px; font-weight:700; color:var(--accent-green); background:rgba(61,139,99,0.1); display:inline-block; padding:2px 6px; border-radius:4px; margin-bottom:8px; letter-spacing:0.5px;">AUTO-CREATE</div>
-              <p style="font-size:12px; color:var(--text-muted); line-height:1.5; margin: 0 0 12px 0;">Saving this as a reusable skill guarantees the agent follows it in the future, while optimizing token usage and improving response quality.</p>
-            </div>
           </div>
-        </div>`;
-      }
-
-      html += `<div class="rec-reasoning"><strong>Why this recommendation:</strong> ${recommendation.reasoning}</div>
       </div>`;
+    }
+
+    html += `<div class="rec-reasoning" style="margin-top:20px; padding:16px; background:#F5F2EA; border-radius:12px; font-size:14px; color:var(--text-main); border:1px solid rgba(0,0,0,0.05);">
+        <strong>Why this recommendation:</strong> ${analysis.recommendation.reasoning}
+    </div>`;
+    
+    html += `</div>`; // end recommendation section
+
     }
 
     html += `<div class="pf-actions">

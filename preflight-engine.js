@@ -33,6 +33,12 @@ const PreFlightEngine = (function() {
     { regex: /(?:follow|use|refer to)\s+(?:the|existing|our)\s+(?:standard|pattern|style)/gi, type: 'pattern' }
   ];
 
+  const PATTERN_DETECTORS = [
+    { id: 'multi-sol', regex: /(?:2-3|multiple|potential)\s+solutions?/i, label: 'Multi-Solution Design', description: 'Requesting multiple candidates for complex architecture.' },
+    { id: 'coding-std', regex: /(?:coding|clean)\s+standards?/i, label: 'Quality Standards', description: 'Enforcing strict linting and architectural patterns.' },
+    { id: 'optimization', regex: /optimize\s+(?:the\s+)?(?:output|code|performance)/i, label: 'Performance Guardrails', description: 'Prioritizing efficiency and resource management.' }
+  ];
+
   const STEP_TEMPLATES = {
     debugging: [
       { action: 'Reproduce', desc: 'Read the prompt and identify the failure mode', tokens: 1200, risk: 'low' },
@@ -250,6 +256,7 @@ const PreFlightEngine = (function() {
     });
 
     const skillMatches = SKILL_BANK.filter(s => s.pattern.test(prompt));
+    const detectedPatterns = PATTERN_DETECTORS.filter(p => p.regex.test(prompt));
     
     // Re-build plan with full context for skill tagging
     const finalExecutionPlan = buildExecutionPlan(
@@ -274,6 +281,7 @@ const PreFlightEngine = (function() {
         if (optimizationProfile.mode === 'agent') {
             reasoning = "High cognitive load detected. Delegating to an agent loop reduces your manual overhead by 80%.";
             if (skillMatches.length > 0) reasoning += " Verified matching skills in your local bank, further reducing decision risk.";
+            if (detectedPatterns.length > 0) reasoning += " I've identified a prompting pattern that could be optimized into a reusable skill.";
         } else {
             reasoning = "Predictable task. Direct execution avoids unnecessary agentic 'hallucination' and saves tokens.";
         }
@@ -293,6 +301,7 @@ const PreFlightEngine = (function() {
       constraints: llmResult?.constraints || constraints,
       contextTriggers,
       skillMatches,
+      detectedPatterns,
       executionPlan: finalExecutionPlan,
       optimizationProfile,
       recommendation: {
