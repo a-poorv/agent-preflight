@@ -6,7 +6,12 @@ const App = (function() {
     messagesArea: document.querySelector('#messages-area'),
     quickPrompts: document.querySelector('#quick-prompts'),
     promptInput: document.querySelector('#prompt-input'),
-    btnSend: document.querySelector('#btn-send')
+    btnSend: document.querySelector('#btn-send'),
+    btnSettings: document.querySelector('#btn-settings'),
+    settingsModal: document.querySelector('#settings-modal'),
+    btnSettingsClose: document.querySelector('#btn-settings-close'),
+    btnSettingsSave: document.querySelector('#btn-settings-save'),
+    apiKeyInput: document.querySelector('#api-key-input')
   };
 
   const QUICK_PROMPTS = [
@@ -48,6 +53,22 @@ const App = (function() {
         DOM.promptInput.focus();
       }
     });
+
+    DOM.btnSettings.addEventListener('click', () => {
+        DOM.apiKeyInput.value = localStorage.getItem('preflight_api_key') || '';
+        DOM.settingsModal.style.display = 'flex';
+    });
+
+    DOM.btnSettingsClose.addEventListener('click', () => {
+        DOM.settingsModal.style.display = 'none';
+    });
+
+    DOM.btnSettingsSave.addEventListener('click', () => {
+        const key = DOM.apiKeyInput.value.trim();
+        LLMService.setApiKey(key);
+        DOM.settingsModal.style.display = 'none';
+        alert('AI settings saved successfully!');
+    });
   }
 
   function autoResize(el) {
@@ -55,18 +76,25 @@ const App = (function() {
     el.style.height = Math.min(el.scrollHeight, 160) + 'px';
   }
 
-  function handleSubmit() {
+  async function handleSubmit() {
     const prompt = DOM.promptInput.value.trim();
     if (!prompt || isExecuting) return;
 
     DOM.welcomeView.style.display = 'none';
-    DOM.chatView.style.display = 'flex';
-
-    DOM.promptInput.value = '';
-    DOM.promptInput.style.height = 'auto';
-
-    currentAnalysis = PreFlightEngine.analyze(prompt);
+    DOM.chatView.style.display = 'block';
+    
+    // Add loading state
+    DOM.messagesArea.innerHTML = `<div style="padding: 40px; text-align: center; color: var(--text-muted);">
+        <div class="ar-dot" style="width:12px; height:12px; background:var(--accent-orange); border-radius:50%; margin:0 auto 16px; animation: pulse 1.5s infinite;"></div>
+        Analyzing task with AI-native engine...
+    </div>`;
+    
+    currentAnalysis = await PreFlightEngine.analyze(prompt);
+    
+    DOM.messagesArea.innerHTML = '';
     renderPreFlightCard(currentAnalysis);
+    DOM.promptInput.value = '';
+    autoResize(DOM.promptInput);
     scrollToBottom();
   }
 

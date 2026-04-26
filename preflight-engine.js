@@ -223,11 +223,16 @@ const PreFlightEngine = (function() {
     }
   }
 
-  function analyze(prompt) {
+  async function analyze(prompt, history = []) {
+    // Attempt live LLM analysis if API key exists
+    let llmResult = null;
+    if (typeof LLMService !== 'undefined' && LLMService.hasKey()) {
+        llmResult = await LLMService.analyzePrompt(prompt, history);
+    }
+
     const taskClassification = classifyTask(prompt);
     const complexity = estimateComplexity(prompt, taskClassification.type);
     const constraints = extractConstraints(prompt);
-    const executionPlan = buildExecutionPlan(taskClassification.type, complexity, { constraints, contextTriggers: [] }); // Temp pass for context detection later
     
     const contextTriggers = [];
     CONTEXT_PATTERNS.forEach(p => {
@@ -237,39 +242,48 @@ const PreFlightEngine = (function() {
       }
     });
 
-    // Re-build plan with full context for skill tagging
-    const finalExecutionPlan = buildExecutionPlan(taskClassification.type, complexity, { constraints, contextTriggers });
-
     const skillMatches = SKILL_BANK.filter(s => s.pattern.test(prompt));
     
     // Re-build plan with full context for skill tagging
-    const finalExecutionPlan = buildExecutionPlan(taskClassification.type, complexity, { constraints, contextTriggers, skillMatches });
+    const finalExecutionPlan = buildExecutionPlan(
+        llmResult?.taskType || taskClassification.type, 
+        complexity, 
+        { constraints, contextTriggers, skillMatches }
+    );
 
-    const optimizationProfile = getOptimizationProfile(constraints, complexity.riskLevel, taskClassification.type, contextTriggers, skillMatches);
+    const optimizationProfile = getOptimizationProfile(
+        constraints, 
+        complexity.riskLevel, 
+        llmResult?.taskType || taskClassification.type, 
+        contextTriggers, 
+        skillMatches
+    );
 
-    let confidence = taskClassification.confidence;
+    let confidence = llmResult?.confidence || taskClassification.confidence;
     if (contextTriggers.length > 0 || skillMatches.length > 0) confidence = Math.min(0.99, confidence + 0.1);
 
-    let reasoning = '';
-    if (optimizationProfile.mode === 'agent') {
-        reasoning = "High cognitive load detected. Delegating to an agent loop reduces your manual overhead by 80%.";
-        if (skillMatches.length > 0) reasoning += " Verified matching skills in your local bank, further reducing decision risk.";
-    } else {
-        reasoning = "Predictable task. Direct execution avoids unnecessary agentic 'hallucination' and saves tokens.";
+    let reasoning = llmResult?.reasoning || '';
+    if (!reasoning) {
+        if (optimizationProfile.mode === 'agent') {
+            reasoning = "High cognitive load detected. Delegating to an agent loop reduces your manual overhead by 80%.";
+            if (skillMatches.length > 0) reasoning += " Verified matching skills in your local bank, further reducing decision risk.";
+        } else {
+            reasoning = "Predictable task. Direct execution avoids unnecessary agentic 'hallucination' and saves tokens.";
+        }
     }
 
-    if (contextTriggers.length > 0) {
+    if (contextTriggers.length > 0 && !llmResult) {
       reasoning += ` I've identified context references that eliminate 'decision blind spots' regarding existing code.`;
     }
 
     return {
       id: 'pf_' + Date.now(),
       prompt,
-      taskType: taskClassification.type,
-      taskLabel: taskClassification.label,
-      taskIcon: taskClassification.icon,
+      taskType: llmResult?.taskType || taskClassification.type,
+      taskLabel: llmResult?.taskLabel || taskClassification.label,
+      taskIcon: taskClassification.icon, // Keep heuristic icon for consistency
       complexity,
-      constraints,
+      constraints: llmResult?.constraints || constraints,
       contextTriggers,
       skillMatches,
       executionPlan: finalExecutionPlan,
