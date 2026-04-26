@@ -128,8 +128,7 @@ const PreFlightEngine = (function() {
     if (lower.includes('review') || lower.includes('analyze') || lower.includes('explain')) {
       constraints.push({ type: 'implicit', rule: 'Read-only analysis — no file modifications' });
     }
-    constraints.push({ type: 'system', rule: 'Will ask for review before modifying critical files' });
-
+    
     return constraints;
   }
 
@@ -233,6 +232,14 @@ const PreFlightEngine = (function() {
     const taskClassification = classifyTask(prompt);
     const complexity = estimateComplexity(prompt, taskClassification.type);
     const constraints = extractConstraints(prompt);
+
+    // Add task-specific system guardrails
+    if (taskClassification.type === 'simple_qa') {
+      constraints.push({ type: 'system', rule: 'Prioritize accuracy over length' });
+      constraints.push({ type: 'system', rule: 'Cite sources where applicable' });
+    } else {
+      constraints.push({ type: 'system', rule: 'Will ask for review before modifying critical files' });
+    }
     
     const contextTriggers = [];
     CONTEXT_PATTERNS.forEach(p => {
