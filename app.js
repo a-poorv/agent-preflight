@@ -6,12 +6,7 @@ const App = (function() {
     messagesArea: document.querySelector('#messages-area'),
     quickPrompts: document.querySelector('#quick-prompts'),
     promptInput: document.querySelector('#prompt-input'),
-    btnSend: document.querySelector('#btn-send'),
-    btnSettings: document.querySelector('#btn-settings'),
-    settingsModal: document.querySelector('#settings-modal'),
-    btnSettingsClose: document.querySelector('#btn-settings-close'),
-    btnSettingsSave: document.querySelector('#btn-settings-save'),
-    apiKeyInput: document.querySelector('#api-key-input')
+    btnSend: document.querySelector('#btn-send')
   };
 
   const QUICK_PROMPTS = [
@@ -52,22 +47,6 @@ const App = (function() {
         autoResize(DOM.promptInput);
         DOM.promptInput.focus();
       }
-    });
-
-    DOM.btnSettings.addEventListener('click', () => {
-        DOM.apiKeyInput.value = localStorage.getItem('preflight_api_key') || '';
-        DOM.settingsModal.style.display = 'flex';
-    });
-
-    DOM.btnSettingsClose.addEventListener('click', () => {
-        DOM.settingsModal.style.display = 'none';
-    });
-
-    DOM.btnSettingsSave.addEventListener('click', () => {
-        const key = DOM.apiKeyInput.value.trim();
-        LLMService.setApiKey(key);
-        DOM.settingsModal.style.display = 'none';
-        alert('AI settings saved successfully!');
     });
   }
 
