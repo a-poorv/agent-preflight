@@ -266,30 +266,31 @@ const App = (function() {
   }
 
   function renderAgentRunningCard(analysis, status = 'running') {
-    let html = `<div class="agent-running-card" style="width: 100%; max-width: 680px; background: white; border: 1px solid var(--border-light); border-radius: 16px; box-shadow: 0 4px 24px rgba(0,0,0,0.04); position:relative; padding: 24px;">`;
+    let html = `<div class="agent-running-card" style="width: 100%; max-width: 680px; background: white; border: 1px solid var(--border-light); border-radius: 16px; box-shadow: 0 4px 24px rgba(0,0,0,0.04); position:relative; overflow: hidden;">`;
     const title = status === 'running' 
-        ? `<div class="ar-dot" style="width:8px; height:8px; background:var(--accent-orange); border-radius:50%; margin-right:8px; animation: pulse 1.5s infinite;"></div> <span style="font-size:16px; font-family:var(--font-serif); font-weight:600;">Agent running</span>` 
-        : `<div style="color:var(--accent-green); display:inline-block; margin-right:8px; font-size:16px;">●</div> <span style="font-size:16px; font-family:var(--font-serif); font-weight:600;">Execution complete</span>`;
+        ? `<div class="ar-dot" style="width:8px; height:8px; background:var(--accent-orange); border-radius:50%; margin-right:12px; animation: pulse 1.5s infinite;"></div> <span style="font-size:18px; font-family:var(--font-serif); font-weight:500; color: var(--text-main);">Agent running</span>` 
+        : `<div style="color:#D96C51; display:inline-block; margin-right:12px; font-size:12px; opacity:0.6;">●</div> <span style="font-size:18px; font-family:var(--font-serif); font-weight:500; color: var(--text-main);">Execution complete</span>`;
     
-    html += `<div class="ar-header" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:24px; padding-bottom:16px; border-bottom:1px solid var(--border-light);">
+    html += `<div class="ar-header" style="background: #FAF8F2; padding: 20px 24px; display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--border-light);">
       <div style="display:flex; align-items:center;">${title}</div>
-      <button class="btn-ghost" onclick="App.reset()" style="font-size:11px; padding:4px 8px; color:var(--text-muted); display:flex; gap:4px; align-items:center;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.5 2v6h-6M2.13 15.57a10 10 0 1 0 3.43-11.44L2.5 8"></path></svg> New task</button>
+      <button class="btn-ghost" onclick="App.reset()" style="font-size:12px; padding:6px 12px; color:var(--text-muted); display:flex; gap:6px; align-items:center; font-weight:500;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.5 2v6h-6M2.13 15.57a10 10 0 1 0 3.43-11.44L2.5 8"></path></svg> New task</button>
     </div>`;
 
-    html += `<div class="ar-steps" id="ar-steps" style="display:flex; flex-direction:column; gap:12px;">`;
+    html += `<div class="ar-content-inner" style="padding: 24px; display:flex; flex-direction:column; gap:16px;">`;
+    html += `<div class="ar-steps" id="ar-steps" style="display:flex; flex-direction:column; gap:16px;">`;
     analysis.executionPlan.steps.forEach(step => {
       html += renderStep(step, 'pending');
     });
     html += `</div>`;
     
     if (status === 'complete') {
-        html += `<div style="background:rgba(61,139,99,0.05); color:var(--text-main); padding:16px; border-radius:8px; font-size:13px; display:flex; gap:8px; align-items:center; margin-top:24px; border:1px solid rgba(61,139,99,0.2);">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--accent-green)" stroke-width="2"><polyline points="20 6 9 17 4 12"></polyline></svg>
-            Plan executed end-to-end. In a real session, this is where the agent would deliver results.
+        html += `<div style="background:rgba(61,139,99,0.05); color:var(--text-main); padding:16px 20px; border-radius:12px; font-size:14px; display:flex; gap:12px; align-items:center; border:1px solid rgba(61,139,99,0.15);">
+            <div style="width:24px; height:24px; border-radius:50%; background:var(--accent-green); color:white; display:flex; align-items:center; justify-content:center; flex-shrink:0;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"></polyline></svg></div>
+            <div style="flex:1;">Plan executed end-to-end. In a real session, this is where the agent would deliver results.</div>
         </div>`;
     }
     
-    html += `</div>`;
+    html += `</div></div>`; // end inner and card
     return html;
   }
 
@@ -301,15 +302,17 @@ const App = (function() {
     
     if (status === 'done') {
         classes += ` done`;
-        containerStyle = `border: 1px solid rgba(61,139,99,0.2); border-radius: 12px; padding: 16px; display: flex; gap: 16px; align-items: flex-start; background: rgba(61,139,99,0.02);`;
+        containerStyle = `border: 1px solid #3D8B6322; border-radius: 16px; padding: 16px 20px; display: flex; gap: 16px; align-items: center; background: #3D8B6308;`;
         icon = `<div class="ar-icon" style="width:24px; height:24px; border-radius:50%; background:var(--accent-green); color:white; display:flex; align-items:center; justify-content:center; flex-shrink:0;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"></polyline></svg></div>`;
     } else if (status === 'paused') {
         classes += ` paused`;
-        containerStyle = `border: 1px solid rgba(236,163,53,0.3); border-radius: 12px; padding: 16px; display: flex; gap: 16px; align-items: flex-start; background: rgba(236,163,53,0.05);`;
-        icon = `<div class="ar-icon" style="width:24px; height:24px; border-radius:50%; background:var(--accent-yellow); color:white; display:flex; align-items:center; justify-content:center; flex-shrink:0;"><svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4" height="16"></rect><rect x="14" y="4" width="4" height="16"></rect></svg></div>`;
-        extraHtml = `<div style="display:flex; align-items:center; gap:16px; margin-top:16px;">
-            <button class="btn btn-primary" style="padding:8px 20px; font-size:13px; font-weight:600; width:auto; border-radius:24px; background:var(--accent-orange); color:white; border:none; cursor:pointer;" onclick="App.continueExecution(${step.id})"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:6px; vertical-align:middle;"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg> Approve & continue</button>
-            <span style="font-size:12px; color:var(--text-muted);">Paused for your review</span>
+        containerStyle = `border: 1px solid #ECA33544; border-radius: 16px; padding: 20px; display: flex; gap: 16px; align-items: flex-start; background: #ECA33508; flex-direction: column;`;
+        icon = `<div class="ar-icon" style="width:24px; height:24px; border-radius:50%; background:var(--accent-yellow); color:white; display:flex; align-items:center; justify-content:center; flex-shrink:0;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><rect x="6" y="4" width="4" height="16"></rect><rect x="14" y="4" width="4" height="16"></rect></svg></div>`;
+        extraHtml = `<div style="display:flex; align-items:center; gap:16px; width: 100%;">
+            <button class="btn" style="padding:10px 24px; font-size:14px; font-weight:600; border-radius:24px; background:#D96C51; color:white; border:none; cursor:pointer; display:flex; align-items:center; gap:8px;" onclick="App.continueExecution(${step.id})">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg> Approve & continue
+            </button>
+            <span style="font-size:13px; color:var(--text-muted);">Paused for your review</span>
         </div>`;
     } else if (status === 'running') {
         icon = `<div class="ar-icon" style="width:24px; height:24px; border-radius:50%; border:2px solid var(--border-light); border-top-color:var(--accent-orange); animation: spin 1s linear infinite; flex-shrink:0;"></div>`;
