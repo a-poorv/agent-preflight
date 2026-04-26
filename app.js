@@ -167,26 +167,32 @@ const App = (function() {
         
         <div style="display:flex; flex-direction:column; gap:16px;">
           ${analysis.suggestedSkills && analysis.suggestedSkills.length > 0 ? `
-            <div class="skill-suggestion-card" style="padding:20px; background:rgba(217,108,81,0.04); border:1px solid rgba(217,108,81,0.15); border-radius:16px; display:flex; gap:16px; align-items:flex-start;">
-              <div style="width:36px; height:36px; background:var(--accent-orange); color:white; border-radius:50%; display:flex; align-items:center; justify-content:center; flex-shrink:0; font-size:18px;">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
-              </div>
-              <div style="flex:1;">
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
-                  <div style="display:flex; align-items:center; gap:8px;">
-                    <h4 style="margin:0; font-size:15px; font-weight:700; color:var(--text-main);">Auto-create a reusable skill</h4>
-                    <span style="font-size:9px; font-weight:700; color:var(--text-muted); background:#eee; padding:2px 6px; border-radius:4px; letter-spacing:0.5px;">SKILL</span>
-                  </div>
-                  <button class="btn btn-save-skill" style="padding:6px 16px; font-size:12px; font-weight:700; border:1px solid var(--accent-orange); color:var(--accent-orange); background:white; border-radius:8px; cursor:pointer;" 
-                    data-name="${analysis.suggestedSkills[0].name.replace(/"/g, '&quot;')}" 
-                    data-pattern="${analysis.suggestedSkills[0].pattern.replace(/"/g, '&quot;')}" 
-                    data-ref="${analysis.suggestedSkills[0].ref.replace(/"/g, '&quot;')}">
-                    Save as /skill
-                  </button>
+            <div class="skill-suggestion-card" style="padding:24px; background:rgba(217,108,81,0.03); border:1px solid rgba(217,108,81,0.12); border-radius:24px; margin-bottom: 24px;">
+              <div style="display:flex; gap:16px; align-items:flex-start;">
+                <div style="width:40px; height:40px; background:var(--accent-orange); color:white; border-radius:50%; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"></path></svg>
                 </div>
-                <p style="margin:0 0 12px 0; font-size:14px; font-weight:500; color:var(--text-main); font-family:var(--font-sans);">"${analysis.suggestedSkills[0].pattern}"</p>
-                <div style="padding:12px; background:white; border-radius:12px; border:1px solid rgba(0,0,0,0.05); font-size:13px; line-height:1.5;">
-                  <span style="font-weight:700; color:var(--text-main);">Contextual insight:</span> You've set a specific rule or pattern. Converting this into a deterministic workflow ensures the agent follows it natively while significantly reducing reasoning overhead.
+                <div style="flex:1;">
+                  <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:8px;">
+                    <div>
+                      <h4 style="margin:0 0 8px 0; font-size:18px; font-weight:500; font-family:var(--font-serif); color:var(--text-main);">Save this as a one-click action</h4>
+                      <div style="display:flex; gap:8px; align-items:center;">
+                        <span style="font-size:10px; font-weight:700; color:var(--text-main); background:#F3F1EB; padding:3px 8px; border-radius:4px; letter-spacing:0.5px;">REUSABLE</span>
+                        <span style="font-size:10px; font-weight:700; color:#3D8B63; background:#EBF4EF; padding:3px 8px; border-radius:4px; letter-spacing:0.5px;">SET UP FOR YOU</span>
+                      </div>
+                    </div>
+                    <button class="btn btn-save-skill" style="padding:8px 20px; font-size:13px; font-weight:600; border:1px solid var(--accent-orange); color:var(--accent-orange); background:transparent; border-radius:12px; cursor:pointer;" 
+                      data-name="${analysis.suggestedSkills[0].name.replace(/"/g, '&quot;')}" 
+                      data-pattern="${analysis.suggestedSkills[0].pattern.replace(/"/g, '&quot;')}" 
+                      data-ref="${analysis.suggestedSkills[0].ref.replace(/"/g, '&quot;')}">
+                      Save as /skill
+                    </button>
+                  </div>
+                  <p style="margin:16px 0; font-size:14px; color:var(--text-muted); line-height:1.5;">I'll bundle the rules I use here into a reusable shortcut you can run again anytime.</p>
+                  <div style="display:flex; align-items:center; gap:8px; color:#3D8B63; font-size:14px; font-weight:500;">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"></path></svg>
+                    <span><strong>What you get:</strong> Next time, same job takes one click — no re-explaining.</span>
+                  </div>
                 </div>
               </div>
             </div>
