@@ -117,7 +117,7 @@ const PreFlightEngine = (function() {
     if (lower.includes('review') || lower.includes('analyze') || lower.includes('explain')) {
       constraints.push({ type: 'implicit', rule: 'Read-only analysis — no file modifications' });
     }
-    constraints.push({ type: 'system', rule: 'Will confirm before making destructive changes' });
+    constraints.push({ type: 'system', rule: 'Will ask for review before modifying critical files' });
 
     return constraints;
   }
