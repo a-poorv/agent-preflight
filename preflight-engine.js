@@ -1,3 +1,62 @@
+/**
+ * VectorStore Simulation (RAG Layer)
+ * This handles semantic retrieval of skills and agent context.
+ */
+class VectorStore {
+  constructor() {
+    this.embeddings = {
+      "ui-standards": ["consistent", "style", "design", "layout", "css", "theme", "look and feel", "brand"],
+      "clean-code": ["refactor", "standard", "clean", "quality", "patterns", "technical debt", "readable"],
+      "auth-protocol": ["login", "security", "authentication", "permission", "access", "oauth", "password"],
+      "architecture": ["setup", "agent", "orchestration", "structure", "module", "system design"]
+    };
+  }
+
+  /**
+   * Simulates semantic search by counting overlapping conceptual terms
+   */
+  search(query, topK = 1) {
+    const results = [];
+    const lowerQuery = query.toLowerCase();
+    
+    for (const [key, terms] of Object.entries(this.embeddings)) {
+      let score = 0;
+      terms.forEach(term => {
+        if (lowerQuery.includes(term)) score += 1;
+      });
+      if (score > 0) results.push({ id: key, score });
+    }
+    
+    return results.sort((a, b) => b.score - a.score).slice(0, topK);
+  }
+}
+
+const Store = new VectorStore();
+
+/**
+ * Agent Orchestrator (Role Management)
+ * Assigns specialized agents based on mission intent.
+ */
+class AgentOrchestrator {
+  constructor() {
+    this.agents = {
+      "ArchitectAgent": { icon: "🏛️", directive: "Focus on structural integrity and cross-module consistency." },
+      "DevAgent": { icon: "💻", directive: "Focus on clean implementation and following operational skills." },
+      "DebugAgent": { icon: "🔍", directive: "Focus on root cause analysis and minimal regression risk." },
+      "SecurityAgent": { icon: "🛡️", directive: "Focus on authentication flow and data boundary protection." }
+    };
+  }
+
+  assign(taskType, intents) {
+    if (intents.some(i => i.id === 'auth-protocol')) return { id: "SecurityAgent", ...this.agents.SecurityAgent };
+    if (taskType === 'debugging') return { id: "DebugAgent", ...this.agents.DebugAgent };
+    if (taskType === 'code_gen' && intents.some(i => i.id === 'architecture')) return { id: "ArchitectAgent", ...this.agents.ArchitectAgent };
+    return { id: "DevAgent", ...this.agents.DevAgent };
+  }
+}
+
+const Orchestrator = new AgentOrchestrator();
+
 const PreFlightEngine = (function() {
 
   const TASK_PATTERNS = {
@@ -263,33 +322,37 @@ const PreFlightEngine = (function() {
         const typeConfig = TASK_PATTERNS[typeKey] || TASK_PATTERNS.code_gen;
         const mission = llmResult?.mission || prompt.substring(0, 60) + '...';
 
-        // 3. Complexity & Constraints
-        const complexity = estimateComplexity(prompt, typeKey);
+        // 3. RAG Intent Engine (New AI-Native Layer)
+        console.log("Performing RAG Retrieval from VectorStore...");
+        const retrievedIntents = Store.search(prompt, 2);
         
-        let mergedConstraints = extractConstraints(prompt);
-        
-        // Strategic Pattern Detection (AI-Native)
-        const strategicPatterns = [
-            { trigger: /consistent|UI|style|design/i, name: "UI Consistency", ref: "/ui-standards-skill.md", rationale: "Ensures UI consistency across prompts. Saves ~200 tokens/turn by skipping style definitions." },
-            { trigger: /clean code|refactor|standard/i, name: "Coding Standards", ref: "/clean-code-skill.md", rationale: "Enforces clean code principles. Reduces PR review cycles and prevents technical debt." },
-            { trigger: /auth|login|security/i, name: "Security Protocol", ref: "/auth-skill.md", rationale: "Standardizes authentication logic. Prevents common security implementation errors." }
-        ];
-
         let suggestedSkills = [];
+        
+        // Map retrieved intents to strategic skills
+        const intentMap = {
+            "ui-standards": { name: "UI Consistency", ref: "/ui-standards-skill.md", rationale: "RAG Match: Detected high UI/Design affinity. Injecting layout guardrails to save tokens." },
+            "clean-code": { name: "Coding Standards", ref: "/clean-code-skill.md", rationale: "RAG Match: Semantic link to quality patterns found. Enforcing clean code constraints." },
+            "auth-protocol": { name: "Security Protocol", ref: "/auth-skill.md", rationale: "RAG Match: Security-related intent identified. Standardizing auth implementation." },
+            "architecture": { name: "Architecture Guardrails", ref: "/arch-skill.md", rationale: "RAG Match: Agent setup mission detected. Forcing structural reviews." }
+        };
+
+        retrievedIntents.forEach(intent => {
+            const skill = intentMap[intent.id];
+            if (skill && !suggestedSkills.some(s => s.ref === skill.ref)) {
+                suggestedSkills.push({
+                    ...skill,
+                    pattern: intent.id,
+                    score: intent.score
+                });
+            }
+        });
+
         if (llmResult?.skill_candidate) {
             suggestedSkills.push(llmResult.skill_candidate);
         }
 
-        strategicPatterns.forEach(p => {
-            if (p.trigger.test(prompt) && !suggestedSkills.some(s => s.ref === p.ref)) {
-                suggestedSkills.push({
-                    name: p.name,
-                    pattern: p.trigger.source,
-                    ref: p.ref,
-                    rationale: p.rationale
-                });
-            }
-        });
+        const complexity = estimateComplexity(prompt, typeKey);
+        let mergedConstraints = extractConstraints(prompt);
 
         if (llmResult?.userConstraints) {
             llmResult.userConstraints.forEach(rule => {
@@ -298,8 +361,11 @@ const PreFlightEngine = (function() {
                 }
             });
         }      
-        // System Limits (New AI-Native Layer)
-        const systemLimits = llmResult?.systemLimits || [];
+        // 3.5 Agent Orchestration
+        const leadAgent = Orchestrator.assign(typeKey, retrievedIntents);
+        console.log(`Orchestrating mission with Lead Agent: ${leadAgent.id}`);
+
+        // 4. Complexity & Metrics
         if (typeKey !== 'simple_qa') {
             mergedConstraints.push({ type: 'system', rule: 'Will ask for review before modifying critical files' });
         }
@@ -309,7 +375,7 @@ const PreFlightEngine = (function() {
         const skillMatches = activeSkillBank.filter(s => new RegExp(s.pattern, 'i').test(prompt));
         
         // Identify potential NEW skills
-        const suggestedSkills = [];
+        const newSkills = [];
         const isPatternAlreadySaved = (pattern) => activeSkillBank.some(s => 
             s.pattern.toLowerCase().includes(pattern.toLowerCase()) || 
             pattern.toLowerCase().includes(s.pattern.toLowerCase())
@@ -318,9 +384,12 @@ const PreFlightEngine = (function() {
         if (llmResult?.skill_candidate) {
             const candidate = llmResult.skill_candidate;
             if (!isPatternAlreadySaved(candidate.pattern)) {
-                suggestedSkills.push(candidate);
+                newSkills.push(candidate);
             }
         }
+
+        // Merge suggested and new skills
+        const allSuggestions = [...suggestedSkills, ...newSkills];
 
         // 5. Build Final Execution Assets
         const finalExecutionPlan = buildExecutionPlan(typeKey, complexity, { skillMatches, constraints: mergedConstraints });
@@ -341,6 +410,7 @@ const PreFlightEngine = (function() {
             id: 'pf_' + Date.now(),
             prompt,
             mission,
+            leadAgent,
             systemLimits,
             taskType: typeKey,
             taskLabel: typeConfig.label,
@@ -348,7 +418,7 @@ const PreFlightEngine = (function() {
             complexity,
             constraints: mergedConstraints,
             skillMatches,
-            suggestedSkills,
+            suggestedSkills: allSuggestions,
             executionPlan: finalExecutionPlan,
             optimizationProfile,
             recommendation: {

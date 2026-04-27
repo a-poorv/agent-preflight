@@ -92,23 +92,43 @@ const App = (function() {
     DOM.chatView.style.display = 'block';
     lastSubmittedPrompt = prompt;
     
-    // Add loading state
+    // Add loading state (Agentic RAG Status)
     DOM.messagesArea.innerHTML = `<div style="padding: 40px; text-align: center; color: var(--text-muted);">
         <div class="ar-dot" style="width:12px; height:12px; background:var(--accent-orange); border-radius:50%; margin:0 auto 16px; animation: pulse 1.5s infinite;"></div>
-        Analyzing task with AI-native engine...
+        <div style="font-size: 11px; font-weight: 700; letter-spacing: 1px; color: var(--text-muted); margin-bottom: 8px; text-transform: uppercase;">Agentic Orchestration Active</div>
+        <div id="loader-status" style="font-size: 14px; font-weight: 500;">Performing RAG retrieval from Skill Bank...</div>
     </div>`;
     
-    currentAnalysis = await PreFlightEngine.analyze(prompt, promptHistory, Array.from(ignoredSkills));
+    // Simulate RAG steps in loader
+    const loaderStatus = document.getElementById('loader-status');
+    setTimeout(() => { if(loaderStatus) loaderStatus.innerText = "Analyzing intent vectors..."; }, 800);
+    setTimeout(() => { if(loaderStatus) loaderStatus.innerText = "Matching mission to specialized agents..."; }, 1600);
+    setTimeout(() => { if(loaderStatus) loaderStatus.innerText = "Building strategic execution plan..."; }, 2400);
     
-    // Add to history for next time
-    promptHistory.push(prompt);
-    if (promptHistory.length > 5) promptHistory.shift();
+    try {
+      currentAnalysis = await PreFlightEngine.analyze(prompt, promptHistory, Array.from(ignoredSkills));
+      
+      // Add to history for next time
+      promptHistory.push(prompt);
+      if (promptHistory.length > 5) promptHistory.shift();
 
-    DOM.messagesArea.innerHTML = '';
-    renderPreFlightCard(currentAnalysis);
-    DOM.promptInput.value = '';
-    autoResize(DOM.promptInput);
-    scrollToBottom();
+      DOM.messagesArea.innerHTML = '';
+      renderPreFlightCard(currentAnalysis);
+    } catch (err) {
+      console.error("Critical Analysis Error:", err);
+      DOM.messagesArea.innerHTML = `
+        <div style="padding: 40px; text-align: center; color: #D96C51;">
+          <div style="font-size: 24px; margin-bottom: 16px;">⚠️</div>
+          <div style="font-weight: 600;">Analysis Engine Encountered an Error</div>
+          <div style="font-size: 13px; margin-top: 8px; opacity: 0.8;">The planner had trouble orchestrating this mission. Please try a different prompt.</div>
+          <button onclick="App.reset()" style="margin-top: 20px; padding: 10px 20px; background: var(--accent-orange); color: white; border: none; border-radius: 8px; cursor: pointer;">Reset Session</button>
+        </div>
+      `;
+    } finally {
+      DOM.promptInput.value = '';
+      autoResize(DOM.promptInput);
+      scrollToBottom();
+    }
   }
 
   function addMessage(role, text) {
@@ -136,12 +156,25 @@ const App = (function() {
               <div style="font-size: 11px; font-weight: 700; color: var(--text-muted); letter-spacing: 1px; text-transform: uppercase; margin-bottom: 8px;">Mission Intent</div>
               <h1 style="margin: 0; font-size: 22px; font-weight: 600; color: var(--text-main); font-family: var(--font-serif); line-height: 1.3;">${mission}</h1>
             </div>
-            <div style="background: white; padding: 10px 16px; border-radius: 12px; border: 1px solid var(--border-light); display: flex; align-items: center; gap: 10px; flex-shrink: 0;">
-              ${complexity.riskLevel === 'high' ? '<span style="font-size: 10px; font-weight: 700; color: #D96C51; background: #FFF9F2; padding: 4px 8px; border-radius: 6px; margin-right: 4px;">DISCOVERY MODE</span>' : ''}
-              <span style="font-size: 20px;">${analysis.taskIcon}</span>
-              <span style="font-size: 14px; font-weight: 600; color: var(--text-main);">${analysis.taskLabel}</span>
+            <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 8px; flex-shrink: 0;">
+              <div style="background: white; padding: 8px 16px; border-radius: 12px; border: 1px solid var(--border-light); display: flex; align-items: center; gap: 10px;">
+                ${complexity.riskLevel === 'high' ? '<span style="font-size: 10px; font-weight: 700; color: #D96C51; background: #FFF9F2; padding: 4px 8px; border-radius: 6px;">DISCOVERY</span>' : ''}
+                <span style="font-size: 20px;">${analysis.taskIcon}</span>
+                <span style="font-size: 14px; font-weight: 600; color: var(--text-main);">${analysis.taskLabel}</span>
+              </div>
+              ${analysis.leadAgent ? `
+                <div style="display: flex; align-items: center; gap: 6px; font-size: 11px; font-weight: 700; color: #3D8B63; background: #EBF4EF; padding: 4px 10px; border-radius: 8px; border: 1px solid #D1E7DD;">
+                  <span>${analysis.leadAgent.icon}</span>
+                  <span>${analysis.leadAgent.id.toUpperCase()} ACTIVE</span>
+                </div>
+              ` : ''}
             </div>
           </div>
+          ${analysis.leadAgent ? `
+            <div style="margin-top: 16px; font-size: 12px; color: #475569; background: rgba(61, 139, 99, 0.05); padding: 8px 16px; border-radius: 8px; border-left: 3px solid #3D8B63;">
+              <strong>Lead Directive:</strong> ${analysis.leadAgent.directive}
+            </div>
+          ` : ''}
         </div>
 
         <div style="padding: 32px;">
