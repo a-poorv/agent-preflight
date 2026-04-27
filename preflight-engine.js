@@ -156,14 +156,21 @@ const PreFlightEngine = (function() {
         ...s, 
         id: idx + 1,
         tokens: s.tokens + Math.round((Math.random() - 0.5) * 400),
-        checkpoint: s.checkpoint || false
+        checkpoint: s.checkpoint || false,
+        reasoning: s.reasoning || "Standard operational procedure for this task type."
       };
+      
+      // Dynamic reasoning based on complexity
+      if (complexity.riskLevel === 'high' && idx === 0) {
+        step.reasoning = "High risk mission. Forcing deep architecture analysis before any file modifications.";
+      }
       
       // Mimic skill injection logic
       if (analysis && analysis.contextTriggers && analysis.contextTriggers.length > 0) {
         if (idx === 0) {
-           step.skillRef = '/shared-context.md';
+           step.skillRef = skillMatch;
            step.desc = `[Recalling Patterns] ${step.desc}`;
+           step.reasoning = "Using saved operational context to skip redundant discovery phases and save tokens.";
         }
       }
       
@@ -172,6 +179,7 @@ const PreFlightEngine = (function() {
            const skillMatch = analysis.skillMatches && analysis.skillMatches.length > 0 ? analysis.skillMatches[0].ref : '/boundary-skill.md';
            step.skillRef = skillMatch;
            step.desc = `[Applying Guardrails] ${step.desc}`;
+           step.reasoning = "Enforcing mission boundaries to prevent hallucination or unwanted side-effects.";
         }
       }
       
@@ -259,14 +267,37 @@ const PreFlightEngine = (function() {
         const complexity = estimateComplexity(prompt, typeKey);
         
         let mergedConstraints = extractConstraints(prompt);
+        
+        // Strategic Pattern Detection (AI-Native)
+        const strategicPatterns = [
+            { trigger: /consistent|UI|style|design/i, name: "UI Consistency", ref: "/ui-standards-skill.md", rationale: "Ensures UI consistency across prompts. Saves ~200 tokens/turn by skipping style definitions." },
+            { trigger: /clean code|refactor|standard/i, name: "Coding Standards", ref: "/clean-code-skill.md", rationale: "Enforces clean code principles. Reduces PR review cycles and prevents technical debt." },
+            { trigger: /auth|login|security/i, name: "Security Protocol", ref: "/auth-skill.md", rationale: "Standardizes authentication logic. Prevents common security implementation errors." }
+        ];
+
+        let suggestedSkills = [];
+        if (llmResult?.skill_candidate) {
+            suggestedSkills.push(llmResult.skill_candidate);
+        }
+
+        strategicPatterns.forEach(p => {
+            if (p.trigger.test(prompt) && !suggestedSkills.some(s => s.ref === p.ref)) {
+                suggestedSkills.push({
+                    name: p.name,
+                    pattern: p.trigger.source,
+                    ref: p.ref,
+                    rationale: p.rationale
+                });
+            }
+        });
+
         if (llmResult?.userConstraints) {
             llmResult.userConstraints.forEach(rule => {
                 if (!mergedConstraints.some(c => c.rule === rule)) {
                     mergedConstraints.push({ type: 'explicit', rule });
                 }
             });
-        }
-        
+        }      
         // System Limits (New AI-Native Layer)
         const systemLimits = llmResult?.systemLimits || [];
         if (typeKey !== 'simple_qa') {

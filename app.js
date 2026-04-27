@@ -170,7 +170,7 @@ const App = (function() {
             </div>
             <div style="flex: 1; padding-left: 16px;">
               <div style="font-size: 10px; font-weight: 700; color: var(--text-muted); letter-spacing: 0.5px; margin-bottom: 8px;">CONFIDENCE</div>
-              <div style="font-family: var(--font-serif); font-size: 20px; font-weight: 500; color: var(--text-main);">${Math.round(recommendation.confidence * 100)}%</div>
+              <div style="font-family: var(--font-serif); font-size: 20px; font-weight: 500; color: var(--text-main);">${recommendation.confidence > 1 ? recommendation.confidence : Math.round(recommendation.confidence * 100)}%</div>
             </div>
           </div>
 
@@ -197,8 +197,9 @@ const App = (function() {
           ` : ''}
 
           <!-- 5. Suggested Skills (Discovery) -->
-          ${analysis.suggestedSkills && analysis.suggestedSkills.length > 0 ? `
-            <div class="skill-suggestion-card" style="padding:24px; background:rgba(217,108,81,0.03); border:1px solid rgba(217,108,81,0.12); border-radius:20px; margin-bottom: 32px;">
+          ${analysis.suggestedSkills && analysis.suggestedSkills.length > 0 ? 
+            analysis.suggestedSkills.map(skill => `
+            <div class="skill-suggestion-card" style="padding:24px; background:rgba(217,108,81,0.03); border:1px solid rgba(217,108,81,0.12); border-radius:20px; margin-bottom: 24px;">
               <div style="display:flex; gap:16px; align-items:flex-start;">
                 <div style="width:40px; height:40px; background:var(--accent-orange); color:white; border-radius:50%; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
                   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"></path></svg>
@@ -206,24 +207,24 @@ const App = (function() {
                 <div style="flex:1;">
                   <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:12px;">
                     <div>
-                      <h4 style="margin:0 0 4px 0; font-size:18px; font-weight:600; font-family: var(--font-serif); color:var(--text-main);">Optimize this workflow</h4>
+                      <h4 style="margin:0 0 4px 0; font-size:18px; font-weight:600; font-family: var(--font-serif); color:var(--text-main);">Strategic Optimization Found</h4>
                       <div style="display:flex; gap:8px;">
-                        <span style="font-size:10px; font-weight:700; color:var(--text-main); background:#F3F1EB; padding:3px 8px; border-radius:4px;">REUSABLE</span>
-                        <span style="font-size:10px; font-weight:700; color:#3D8B63; background:#EBF4EF; padding:3px 8px; border-radius:4px;">AI-POWERED</span>
+                        <span style="font-size:10px; font-weight:700; color:var(--text-main); background:#F3F1EB; padding:3px 8px; border-radius:4px;">${skill.name.toUpperCase()}</span>
+                        <span style="font-size:10px; font-weight:700; color:#3D8B63; background:#EBF4EF; padding:3px 8px; border-radius:4px;">AI-NATIVE</span>
                       </div>
                     </div>
                     <button class="btn btn-save-skill" style="padding:8px 20px; font-size:13px; font-weight:600; border:1px solid var(--accent-orange); color:var(--accent-orange); background:transparent; border-radius:10px; cursor:pointer;" 
-                      data-name="${analysis.suggestedSkills[0].name.replace(/"/g, '&quot;')}" 
-                      data-pattern="${analysis.suggestedSkills[0].pattern.replace(/"/g, '&quot;')}" 
-                      data-ref="${analysis.suggestedSkills[0].ref.replace(/"/g, '&quot;')}">
+                      data-name="${skill.name.replace(/"/g, '&quot;')}" 
+                      data-pattern="${skill.pattern.replace(/"/g, '&quot;')}" 
+                      data-ref="${skill.ref.replace(/"/g, '&quot;')}">
                       Save as /skill
                     </button>
                   </div>
-                  <p style="margin:12px 0; font-size:14px; color:var(--text-muted); line-height:1.5;">${analysis.suggestedSkills[0].rationale || "I've identified a pattern that should be bundled into a deterministic workflow."}</p>
+                  <p style="margin:12px 0; font-size:14px; color:var(--text-muted); line-height:1.5;">${skill.rationale || "I've identified an operational pattern that should be bundled into a deterministic workflow."}</p>
                 </div>
               </div>
             </div>
-          ` : ''}
+            `).join('') : ''}
 
           <!-- 6. Execution Plan Steps -->
           <div style="margin-bottom: 32px;">
@@ -242,6 +243,11 @@ const App = (function() {
                       <div style="margin-top: 8px; display: inline-flex; align-items: center; gap: 6px; background: black; color: white; padding: 4px 10px; border-radius: 6px; font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.5px;">
                         <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"></path></svg>
                         USING ${step.skillRef.toUpperCase()}
+                      </div>
+                    ` : ''}
+                    ${step.reasoning ? `
+                      <div style="margin-top: 6px; font-size: 12px; color: #3D8B63; font-style: italic; background: #F4F9F6; padding: 6px 10px; border-radius: 8px; border-left: 2px solid #3D8B63;">
+                        <strong>Planner reasoning:</strong> ${step.reasoning}
                       </div>
                     ` : ''}
                   </div>
