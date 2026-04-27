@@ -1,0 +1,495 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Claude Agent Compass — Architecture Diagrams</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --orange: #D96C51;
+    --orange-light: #FFF0EC;
+    --orange-border: #F5C9BC;
+    --green: #3D8B63;
+    --green-light: #F0F7F3;
+    --green-border: #C4DDD2;
+    --yellow: #ECA335;
+    --yellow-light: #FFF8EC;
+    --yellow-border: #F5DDA8;
+    --text: #2D2A26;
+    --muted: #6B6863;
+    --border: #EBE8E0;
+    --bg: #FDFBF7;
+    --card: #FFFFFF;
+    --serif: 'Playfair Display', Georgia, serif;
+    --sans: 'Inter', system-ui, sans-serif;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: var(--sans); background: var(--bg); color: var(--text); line-height: 1.5; }
+
+  .page { max-width: 1080px; margin: 0 auto; padding: 60px 40px; }
+  .cover { text-align: center; margin-bottom: 80px; padding-bottom: 60px; border-bottom: 1px solid var(--border); }
+  .cover-label { font-size: 11px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: var(--orange); margin-bottom: 16px; }
+  .cover-title { font-family: var(--serif); font-size: 42px; color: var(--text); margin-bottom: 14px; line-height: 1.2; }
+  .cover-sub { font-size: 16px; color: var(--muted); max-width: 520px; margin: 0 auto; }
+
+  /* Section */
+  .section { margin-bottom: 80px; }
+  .section-label { font-size: 10px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: var(--orange); margin-bottom: 8px; }
+  .section-title { font-family: var(--serif); font-size: 26px; margin-bottom: 6px; }
+  .section-sub { font-size: 13px; color: var(--muted); margin-bottom: 32px; }
+
+  /* ── Diagram 1: Problem → Solution ── */
+  .prob-sol { display: grid; grid-template-columns: 1fr 60px 1fr; gap: 0; align-items: center; }
+  .prob-box, .sol-box { border-radius: 16px; padding: 28px; }
+  .prob-box { background: #FFF5F2; border: 1px solid #F0C7BA; }
+  .sol-box { background: #F0F7F3; border: 1px solid var(--green-border); }
+  .box-tag { font-size: 10px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; margin-bottom: 10px; }
+  .prob-box .box-tag { color: #A34B36; }
+  .sol-box .box-tag { color: var(--green); }
+  .box-title { font-size: 17px; font-weight: 600; margin-bottom: 12px; }
+  .box-list { list-style: none; display: flex; flex-direction: column; gap: 8px; }
+  .box-list li { font-size: 13px; color: var(--muted); display: flex; align-items: flex-start; gap: 8px; }
+  .box-list li::before { content: ''; width: 5px; height: 5px; border-radius: 50%; background: currentColor; margin-top: 7px; flex-shrink: 0; }
+  .prob-box .box-list li::before { background: #A34B36; }
+  .sol-box .box-list li::before { background: var(--green); }
+  .arrow-mid { display: flex; align-items: center; justify-content: center; font-size: 28px; color: var(--border); }
+
+  /* ── Diagram 2: User Flow ── */
+  .flow-row { display: flex; flex-direction: column; gap: 0; }
+  .flow-step { display: flex; align-items: stretch; gap: 0; }
+  .flow-num-col { display: flex; flex-direction: column; align-items: center; width: 48px; flex-shrink: 0; }
+  .flow-num { width: 36px; height: 36px; border-radius: 50%; background: var(--orange); color: white; font-size: 14px; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .flow-line { flex: 1; width: 2px; background: var(--border); margin: 4px 0; }
+  .flow-card { flex: 1; background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 16px 20px; margin-bottom: 8px; margin-left: 16px; }
+  .flow-card-title { font-size: 14px; font-weight: 600; margin-bottom: 4px; }
+  .flow-card-sub { font-size: 12px; color: var(--muted); }
+  .flow-branches { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-left: 64px; margin-bottom: 8px; }
+  .branch-card { border-radius: 10px; padding: 12px 14px; font-size: 12px; font-weight: 500; text-align: center; border: 1px solid; }
+  .branch-agent { background: var(--orange-light); border-color: var(--orange-border); color: var(--orange); }
+  .branch-modify { background: #F3F1EB; border-color: var(--border); color: var(--muted); }
+  .branch-manual { background: #F3F1EB; border-color: var(--border); color: var(--muted); }
+  .flow-outcomes { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-left: 64px; margin-bottom: 8px; }
+  .outcome-card { border-radius: 10px; padding: 12px 14px; font-size: 12px; border: 1px solid; }
+  .outcome-checkpoint { background: var(--yellow-light); border-color: var(--yellow-border); color: #8A6115; }
+  .outcome-complete { background: var(--green-light); border-color: var(--green-border); color: var(--green); }
+
+  /* ── Diagram 3: 4 Engines ── */
+  .engines-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .engine-card { background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 24px; position: relative; overflow: hidden; }
+  .engine-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px; }
+  .engine-card.orange::before { background: var(--orange); }
+  .engine-card.green::before { background: var(--green); }
+  .engine-card.yellow::before { background: var(--yellow); }
+  .engine-card.blue::before { background: #5B76A6; }
+  .engine-icon { font-size: 24px; margin-bottom: 10px; }
+  .engine-name { font-size: 11px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: var(--muted); margin-bottom: 6px; }
+  .engine-title { font-size: 17px; font-weight: 600; margin-bottom: 10px; }
+  .engine-io { display: flex; flex-direction: column; gap: 6px; }
+  .io-row { display: flex; gap: 8px; align-items: flex-start; font-size: 12px; }
+  .io-label { font-size: 10px; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase; padding: 2px 6px; border-radius: 4px; flex-shrink: 0; margin-top: 1px; }
+  .io-in { background: #EEF4F0; color: var(--green); }
+  .io-out { background: var(--orange-light); color: var(--orange); }
+  .io-text { color: var(--muted); line-height: 1.4; }
+
+  /* ── Diagram 4: Skill Flow ── */
+  .skill-flow { display: flex; align-items: flex-start; gap: 0; overflow-x: auto; padding-bottom: 8px; }
+  .sf-node { flex-shrink: 0; display: flex; flex-direction: column; align-items: center; }
+  .sf-box { border-radius: 12px; padding: 14px 16px; font-size: 12px; font-weight: 500; text-align: center; border: 1px solid; min-width: 130px; max-width: 150px; line-height: 1.4; }
+  .sf-box.trigger { background: #F3F1EB; border-color: var(--border); color: var(--text); }
+  .sf-box.gate { background: var(--yellow-light); border-color: var(--yellow-border); color: #8A6115; }
+  .sf-box.panel { background: var(--orange-light); border-color: var(--orange-border); color: #7A3A25; }
+  .sf-box.add { background: var(--orange); border-color: var(--orange); color: white; font-weight: 600; }
+  .sf-box.edit { background: #F3F1EB; border-color: var(--border); color: var(--text); }
+  .sf-box.discard { background: #F3F1EB; border-color: var(--border); color: var(--muted); }
+  .sf-box.result { background: var(--green-light); border-color: var(--green-border); color: var(--green); font-weight: 600; }
+  .sf-box.badge { background: var(--orange-light); border-color: var(--orange-border); color: var(--orange); font-weight: 600; }
+  .sf-arrow { display: flex; align-items: center; padding: 0 6px; color: var(--border); font-size: 20px; flex-shrink: 0; height: 50px; }
+  .sf-gate-note { font-size: 10px; color: var(--muted); text-align: center; margin-top: 6px; max-width: 130px; line-height: 1.3; }
+  .sf-actions { display: flex; flex-direction: column; gap: 6px; }
+
+  /* ── Diagram 5: System Architecture ── */
+  .arch { display: flex; flex-direction: column; gap: 12px; }
+  .arch-layer { border-radius: 14px; border: 1px solid; padding: 20px 24px; }
+  .arch-layer.browser { background: #F9F8FC; border-color: #D5D0E8; }
+  .arch-layer.server { background: #F0F4F9; border-color: #C4D0DF; }
+  .arch-layer.deploy { background: var(--orange-light); border-color: var(--orange-border); }
+  .arch-layer-label { font-size: 10px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; margin-bottom: 14px; }
+  .arch-layer.browser .arch-layer-label { color: #5B4FA8; }
+  .arch-layer.server .arch-layer-label { color: #2E5A8A; }
+  .arch-layer.deploy .arch-layer-label { color: var(--orange); }
+  .arch-modules { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+  .arch-mod { border-radius: 8px; padding: 8px 14px; font-size: 12px; font-weight: 600; border: 1px solid; white-space: nowrap; }
+  .arch-mod.purple { background: #EEE9FC; border-color: #C8BBF5; color: #5B4FA8; }
+  .arch-mod.blue { background: #E6EEF7; border-color: #B8CCE0; color: #2E5A8A; }
+  .arch-mod.orange { background: var(--orange-light); border-color: var(--orange-border); color: var(--orange); }
+  .arch-mod.green { background: var(--green-light); border-color: var(--green-border); color: var(--green); }
+  .arch-mod.gray { background: #F3F1EB; border-color: var(--border); color: var(--muted); }
+  .arch-connect { display: flex; justify-content: center; align-items: center; gap: 8px; font-size: 11px; color: var(--muted); padding: 4px 0; }
+  .arch-connect-line { flex: 1; height: 1px; background: var(--border); max-width: 200px; border-style: dashed; }
+
+  /* ── Phase Roadmap ── */
+  .roadmap { display: grid; grid-template-columns: repeat(5, 1fr); gap: 0; position: relative; }
+  .roadmap::before { content: ''; position: absolute; top: 22px; left: 5%; right: 5%; height: 2px; background: linear-gradient(to right, var(--orange), var(--green)); z-index: 0; }
+  .phase-col { display: flex; flex-direction: column; align-items: center; position: relative; z-index: 1; }
+  .phase-dot { width: 44px; height: 44px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 16px; margin-bottom: 16px; border: 3px solid var(--bg); }
+  .phase-dot.done { background: var(--orange); }
+  .phase-dot.next { background: var(--green); }
+  .phase-card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 12px; text-align: center; width: 100%; }
+  .phase-num { font-size: 10px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: var(--muted); margin-bottom: 4px; }
+  .phase-title { font-size: 13px; font-weight: 600; margin-bottom: 8px; }
+  .phase-items { display: flex; flex-direction: column; gap: 3px; }
+  .phase-item { font-size: 11px; color: var(--muted); }
+  .phase-badge { display: inline-block; font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 999px; margin-top: 8px; }
+  .phase-badge.done { background: var(--orange-light); color: var(--orange); border: 1px solid var(--orange-border); }
+  .phase-badge.next { background: var(--green-light); color: var(--green); border: 1px solid var(--green-border); }
+
+  /* Print / export */
+  @media print {
+    body { background: white; }
+    .page { padding: 40px; }
+    .section { page-break-inside: avoid; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <!-- Cover -->
+  <div class="cover">
+    <div class="cover-label">Product Architecture</div>
+    <h1 class="cover-title">Claude Agent Compass</h1>
+    <p class="cover-sub">A decision-first pre-flight layer that guides users before they delegate to a Claude Agent — reducing silent failures, token waste, and low-confidence delegation.</p>
+  </div>
+
+  <!-- ── D1: Problem → Solution ── -->
+  <div class="section">
+    <div class="section-label">Diagram 1</div>
+    <h2 class="section-title">The Core Problem We Solve</h2>
+    <p class="section-sub">Users aren't blocked by capability. They're blocked by decisions.</p>
+    <div class="prob-sol">
+      <div class="prob-box">
+        <div class="box-tag">Without Agent Compass</div>
+        <div class="box-title">Decision blind spots</div>
+        <ul class="box-list">
+          <li>Should I use simple prompting or Claude Agent?</li>
+          <li>What will happen if I delegate this task?</li>
+          <li>Will my constraints even be respected?</li>
+          <li>Silent failures — no warnings, no checkpoints</li>
+          <li>Token waste from unconstrained retries</li>
+        </ul>
+      </div>
+      <div class="arrow-mid">→</div>
+      <div class="sol-box">
+        <div class="box-tag">With Agent Compass</div>
+        <div class="box-title">Decision clarity before execution</div>
+        <ul class="box-list">
+          <li>Clear recommendation: agent vs manual, with reason</li>
+          <li>Detected constraints shown upfront</li>
+          <li>Skill opportunities only when genuinely useful</li>
+          <li>Checkpoints auto-managed by risk level</li>
+          <li>Proactive intervention before silent failure</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── D2: User Flow ── -->
+  <div class="section">
+    <div class="section-label">Diagram 2</div>
+    <h2 class="section-title">User Journey — Step by Step</h2>
+    <p class="section-sub">What a user experiences from prompt entry to task completion.</p>
+
+    <div class="flow-row">
+      <div class="flow-step">
+        <div class="flow-num-col">
+          <div class="flow-num">1</div>
+          <div class="flow-line"></div>
+        </div>
+        <div class="flow-card">
+          <div class="flow-card-title">Enter any prompt</div>
+          <div class="flow-card-sub">Describe a task in plain language — no special formatting needed.</div>
+        </div>
+      </div>
+
+      <div class="flow-step">
+        <div class="flow-num-col">
+          <div class="flow-num">2</div>
+          <div class="flow-line"></div>
+        </div>
+        <div class="flow-card">
+          <div class="flow-card-title">Pre-flight analysis runs (2–3 sec)</div>
+          <div class="flow-card-sub">RAG retrieval → intent classification → constraint extraction → plan build</div>
+        </div>
+      </div>
+
+      <div class="flow-step">
+        <div class="flow-num-col">
+          <div class="flow-num">3</div>
+          <div class="flow-line"></div>
+        </div>
+        <div class="flow-card">
+          <div class="flow-card-title">Review the Compass Card</div>
+          <div class="flow-card-sub">Recommendation + reasoning · Detected constraints · Skill opportunity (only if a boundary is found) · Expandable step plan</div>
+        </div>
+      </div>
+
+      <div class="flow-step">
+        <div class="flow-num-col">
+          <div class="flow-num">4</div>
+          <div class="flow-line"></div>
+        </div>
+        <div class="flow-card" style="margin-bottom:10px;">
+          <div class="flow-card-title">Choose a path</div>
+          <div class="flow-card-sub">Three options — always reversible</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="flow-branches">
+      <div class="branch-card branch-agent">▶ Proceed with Claude Agent<br><span style="font-weight:400;opacity:0.8;">Simulated step execution</span></div>
+      <div class="branch-card branch-modify">✏ Modify Prompt<br><span style="font-weight:400;opacity:0.8;">Back to input, pre-filled</span></div>
+      <div class="branch-card branch-manual">💬 Stay Manual<br><span style="font-weight:400;opacity:0.8;">Simple chat mode</span></div>
+    </div>
+
+    <div class="flow-row">
+      <div class="flow-step">
+        <div class="flow-num-col">
+          <div class="flow-num">5</div>
+        </div>
+        <div class="flow-card">
+          <div class="flow-card-title">During agent execution</div>
+          <div class="flow-card-sub">Steps animate live · Checkpoints pause for approval · High-risk drift triggers proactive intervention</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="flow-outcomes">
+      <div class="outcome-card outcome-checkpoint">⏸ <strong>Checkpoint hit</strong> — human reviews, approves or switches step to manual</div>
+      <div class="outcome-card outcome-complete">✅ <strong>Execution complete</strong> — outcome delivered, learning profile updated</div>
+    </div>
+  </div>
+
+  <!-- ── D3: 4 Engines ── -->
+  <div class="section">
+    <div class="section-label">Diagram 3</div>
+    <h2 class="section-title">The 4-Engine Model</h2>
+    <p class="section-sub">Each engine handles a distinct concern — together they form the full pre-flight loop.</p>
+    <div class="engines-grid">
+
+      <div class="engine-card orange">
+        <div class="engine-icon">⚡</div>
+        <div class="engine-name">Engine 1</div>
+        <div class="engine-title">Intent Router</div>
+        <div class="engine-io">
+          <div class="io-row"><span class="io-label io-in">IN</span><span class="io-text">Prompt text, task history</span></div>
+          <div class="io-row"><span class="io-label io-out">OUT</span><span class="io-text">Recommendation (agent / manual), confidence score, 1-line reason</span></div>
+        </div>
+      </div>
+
+      <div class="engine-card green">
+        <div class="engine-icon">🛡</div>
+        <div class="engine-name">Engine 2</div>
+        <div class="engine-title">Constraint + Skill Engine</div>
+        <div class="engine-io">
+          <div class="io-row"><span class="io-label io-in">IN</span><span class="io-text">Prompt text, system limits, existing skill bank</span></div>
+          <div class="io-row"><span class="io-label io-out">OUT</span><span class="io-text">Constraint chips · Skill opportunity panel (only on boundary detection)</span></div>
+        </div>
+      </div>
+
+      <div class="engine-card yellow">
+        <div class="engine-icon">🔔</div>
+        <div class="engine-name">Engine 3</div>
+        <div class="engine-title">Intervention Engine</div>
+        <div class="engine-io">
+          <div class="io-row"><span class="io-label io-in">IN</span><span class="io-text">Step risk, mission risk level, progress ratio</span></div>
+          <div class="io-row"><span class="io-label io-out">OUT</span><span class="io-text">Intervention banner · Auto-escalated checkpoints · Manual override gate</span></div>
+        </div>
+      </div>
+
+      <div class="engine-card blue">
+        <div class="engine-icon">🧠</div>
+        <div class="engine-name">Engine 4</div>
+        <div class="engine-title">Learning Profile</div>
+        <div class="engine-io">
+          <div class="io-row"><span class="io-label io-in">IN</span><span class="io-text">Task type, outcome (success / manual)</span></div>
+          <div class="io-row"><span class="io-label io-out">OUT</span><span class="io-text">Adaptive checkpoint strictness · Per-type success rate (localStorage)</span></div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ── D4: Skill Flow ── -->
+  <div class="section">
+    <div class="section-label">Diagram 4</div>
+    <h2 class="section-title">Skill Suggestion — When It Fires and When It Doesn't</h2>
+    <p class="section-sub">Not every prompt gets a skill suggestion. It only appears when a real recurring boundary is detected.</p>
+
+    <div class="skill-flow">
+      <div class="sf-node">
+        <div class="sf-box trigger">User submits prompt<br><span style="font-size:11px;opacity:0.7;margin-top:4px;display:block;">Any task type</span></div>
+      </div>
+      <div class="sf-arrow">→</div>
+      <div class="sf-node">
+        <div class="sf-box gate">Boundary check<br><span style="font-size:11px;opacity:0.7;margin-top:4px;display:block;">Eligible task type?<br>Constraint detected?</span></div>
+        <div class="sf-gate-note">simple_qa · analysis · research → always skip</div>
+      </div>
+      <div class="sf-arrow">→</div>
+      <div class="sf-node">
+        <div class="sf-box panel">Skill Opportunity<br>panel appears<br><span style="font-size:11px;opacity:0.7;margin-top:4px;display:block;">Shows the boundary<br>reason explicitly</span></div>
+      </div>
+      <div class="sf-arrow">→</div>
+      <div class="sf-node">
+        <div class="sf-actions">
+          <div class="sf-box add">+ Add Skill</div>
+          <div class="sf-box edit">Edit name</div>
+          <div class="sf-box discard">Discard</div>
+        </div>
+      </div>
+      <div class="sf-arrow">→</div>
+      <div class="sf-node">
+        <div class="sf-box result">Re-analysis runs<br><span style="font-size:11px;opacity:0.7;margin-top:4px;display:block;">Skill now matches<br>pattern in bank</span></div>
+      </div>
+      <div class="sf-arrow">→</div>
+      <div class="sf-node">
+        <div class="sf-box badge">✓ Skill optimized<br>badge appears</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── D5: System Architecture ── -->
+  <div class="section">
+    <div class="section-label">Diagram 5</div>
+    <h2 class="section-title">System Architecture</h2>
+    <p class="section-sub">Three layers — browser, server, and deployment. Skill storage gracefully degrades to localStorage when the API is unavailable.</p>
+
+    <div class="arch">
+      <div class="arch-layer browser">
+        <div class="arch-layer-label">🌐 Browser — Vite + TypeScript</div>
+        <div class="arch-modules">
+          <div class="arch-mod purple">app.ts<br><span style="font-weight:400;font-size:11px;">UI + event binding</span></div>
+          <div class="arch-mod purple">engine.ts<br><span style="font-weight:400;font-size:11px;">RAG + classification + plan</span></div>
+          <div class="arch-mod purple">llm-service.ts<br><span style="font-weight:400;font-size:11px;">OpenAI (optional)</span></div>
+          <div class="arch-mod purple">types.ts<br><span style="font-weight:400;font-size:11px;">TypeScript interfaces</span></div>
+          <div class="arch-mod gray">localStorage<br><span style="font-weight:400;font-size:11px;">Skill bank fallback<br>+ learning profiles</span></div>
+        </div>
+      </div>
+
+      <div class="arch-connect">
+        <div class="arch-connect-line"></div>
+        <span>GET / POST / PATCH / DELETE  /api/skills → falls back to localStorage if unavailable</span>
+        <div class="arch-connect-line"></div>
+      </div>
+
+      <div class="arch-layer server">
+        <div class="arch-layer-label">🖥 Node.js Server — Express</div>
+        <div class="arch-modules">
+          <div class="arch-mod blue">server.ts<br><span style="font-weight:400;font-size:11px;">REST API</span></div>
+          <div class="arch-mod blue">GET /api/skills</div>
+          <div class="arch-mod blue">POST /api/skills</div>
+          <div class="arch-mod blue">PATCH /api/skills/:ref</div>
+          <div class="arch-mod blue">DELETE /api/skills/:ref</div>
+          <div class="arch-mod gray">data/skills.json<br><span style="font-weight:400;font-size:11px;">File-persisted</span></div>
+        </div>
+      </div>
+
+      <div class="arch-connect">
+        <div class="arch-connect-line"></div>
+        <span>vite build → dist/ → static deploy</span>
+        <div class="arch-connect-line"></div>
+      </div>
+
+      <div class="arch-layer deploy">
+        <div class="arch-layer-label">☁️ Vercel — Static Deployment</div>
+        <div class="arch-modules">
+          <div class="arch-mod orange">agent-preflight.vercel.app</div>
+          <div class="arch-mod orange">GitHub → auto-deploy on push to main</div>
+          <div class="arch-mod orange">vercel.json — Vite output config</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── D6: Phase Roadmap ── -->
+  <div class="section">
+    <div class="section-label">Diagram 6</div>
+    <h2 class="section-title">Phase Roadmap</h2>
+    <p class="section-sub">Phases 1–4 shipped. Phase 5 is real Claude API integration.</p>
+
+    <div class="roadmap">
+      <div class="phase-col">
+        <div class="phase-dot done">🎯</div>
+        <div class="phase-card">
+          <div class="phase-num">Phase 1</div>
+          <div class="phase-title">Decision Advisor</div>
+          <div class="phase-items">
+            <div class="phase-item">Intent classification</div>
+            <div class="phase-item">Constraint visibility</div>
+            <div class="phase-item">Skill suggestion</div>
+          </div>
+          <span class="phase-badge done">✓ Done</span>
+        </div>
+      </div>
+
+      <div class="phase-col">
+        <div class="phase-dot done">▶</div>
+        <div class="phase-card">
+          <div class="phase-num">Phase 2</div>
+          <div class="phase-title">Guided Execution</div>
+          <div class="phase-items">
+            <div class="phase-item">Risk checkpoints</div>
+            <div class="phase-item">Pause + approve</div>
+            <div class="phase-item">Manual override</div>
+          </div>
+          <span class="phase-badge done">✓ Done</span>
+        </div>
+      </div>
+
+      <div class="phase-col">
+        <div class="phase-dot done">🧠</div>
+        <div class="phase-card">
+          <div class="phase-num">Phase 3</div>
+          <div class="phase-title">Learning Loop</div>
+          <div class="phase-items">
+            <div class="phase-item">Preference memory</div>
+            <div class="phase-item">Outcome tracking</div>
+            <div class="phase-item">Adaptive tuning</div>
+          </div>
+          <span class="phase-badge done">✓ Done</span>
+        </div>
+      </div>
+
+      <div class="phase-col">
+        <div class="phase-dot done">🔔</div>
+        <div class="phase-card">
+          <div class="phase-num">Phase 4</div>
+          <div class="phase-title">Proactive Intervention</div>
+          <div class="phase-items">
+            <div class="phase-item">Drift scoring</div>
+            <div class="phase-item">Auto-escalation</div>
+            <div class="phase-item">Confidence sparkline</div>
+          </div>
+          <span class="phase-badge done">✓ Done</span>
+        </div>
+      </div>
+
+      <div class="phase-col">
+        <div class="phase-dot next">🚀</div>
+        <div class="phase-card">
+          <div class="phase-num">Phase 5</div>
+          <div class="phase-title">Real Integration</div>
+          <div class="phase-items">
+            <div class="phase-item">Live Claude API</div>
+            <div class="phase-item">skill.md file writes</div>
+            <div class="phase-item">Multi-agent orchestration</div>
+          </div>
+          <span class="phase-badge next">→ Next</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>
