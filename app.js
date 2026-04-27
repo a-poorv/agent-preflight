@@ -137,6 +137,7 @@ const App = (function() {
               <h1 style="margin: 0; font-size: 22px; font-weight: 600; color: var(--text-main); font-family: var(--font-serif); line-height: 1.3;">${mission}</h1>
             </div>
             <div style="background: white; padding: 10px 16px; border-radius: 12px; border: 1px solid var(--border-light); display: flex; align-items: center; gap: 10px; flex-shrink: 0;">
+              ${complexity.riskLevel === 'high' ? '<span style="font-size: 10px; font-weight: 700; color: #D96C51; background: #FFF9F2; padding: 4px 8px; border-radius: 6px; margin-right: 4px;">DISCOVERY MODE</span>' : ''}
               <span style="font-size: 20px;">${analysis.taskIcon}</span>
               <span style="font-size: 14px; font-weight: 600; color: var(--text-main);">${analysis.taskLabel}</span>
             </div>
@@ -158,7 +159,23 @@ const App = (function() {
             </div>
           ` : ''}
 
-          <!-- 3. Planning Metadata Row -->
+          <!-- 2.5 Discovery Phase (Clarifying Questions) -->
+          ${complexity.riskLevel === 'high' ? `
+            <div style="margin-bottom: 24px; padding: 20px; background: #F8F9FB; border: 1px solid #E2E8F0; border-radius: 16px;">
+              <div style="font-size: 11px; font-weight: 700; color: #475569; letter-spacing: 0.5px; margin-bottom: 12px;">DISCOVERY PHASE: CLARIFYING QUESTIONS</div>
+              <div style="display: flex; flex-direction: column; gap: 12px;">
+                <div style="font-size: 13px; color: #1E293B; background: white; padding: 10px 14px; border-radius: 8px; border: 1px solid #E2E8F0;">
+                  <strong>Q:</strong> What is the primary role or specialization for this agent?
+                </div>
+                <div style="font-size: 13px; color: #1E293B; background: white; padding: 10px 14px; border-radius: 8px; border: 1px solid #E2E8F0;">
+                  <strong>Q:</strong> Which tool categories (File editing, Terminal, Web) should be prioritized?
+                </div>
+              </div>
+              <div style="margin-top: 12px; font-size: 12px; color: #64748B; font-style: italic;">
+                Tip: Answering these in your next prompt will highly optimize the /skill.md creation.
+              </div>
+            </div>
+          ` : ''}
           <div style="display: flex; gap: 24px; padding: 20px; background: #FBFBFB; border: 1px solid var(--border-light); border-radius: 16px; margin-bottom: 32px;">
             <div style="flex: 1; border-right: 1px solid var(--border-light); padding-right: 16px;">
               <div style="font-size: 10px; font-weight: 700; color: var(--text-muted); letter-spacing: 0.5px; margin-bottom: 8px;">COMPLEXITY</div>
