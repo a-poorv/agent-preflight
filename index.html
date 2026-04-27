@@ -3,11 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pre-Flight | Prototype</title>
+    <title>Claude Agent Pre-Flight | Prototype</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Playfair+Display:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="src/extra.css">
 </head>
 <body>
     <div class="app-container">
@@ -19,7 +20,7 @@
                         <path d="M12 2L14.4 8.6L21 11L14.4 13.4L12 20L9.6 13.4L3 11L9.6 8.6L12 2Z"/>
                     </svg>
                 </div>
-                <span class="logo-text">Pre-Flight</span>
+                <span class="logo-text">Claude Agent Pre-Flight</span>
                 <span class="badge-prototype">PROTOTYPE</span>
             </div>
             <div class="nav-links">
@@ -32,7 +33,7 @@
             <!-- Welcome View -->
             <div id="welcome-view" class="welcome-view">
                 <h1 class="hero-title">Know before you <span class="highlight">agent</span>.</h1>
-                <p class="hero-subtitle">Describe a task. Pre-Flight previews the plan, constraints, and checkpoints — so you can decide whether to hand it to an agent or stay manual.</p>
+                <p class="hero-subtitle">Describe a task. Claude Pre-Flight previews the plan, constraints, and checkpoints so you can decide whether to delegate to a Claude Agent or stay manual.</p>
                 
                 <div class="quick-prompts-grid" id="quick-prompts">
                     <!-- Injected by app.js -->
@@ -47,7 +48,7 @@
             <!-- Input Area -->
             <div class="input-container">
                 <div class="input-box">
-                    <textarea id="prompt-input" rows="1" placeholder="Describe a task — e.g. 'Refactor the auth module step-by-step, don't change behavior'"></textarea>
+                    <textarea id="prompt-input" rows="1" placeholder="Describe a Claude task — e.g. 'Refactor the auth module step-by-step, don't change behavior'"></textarea>
                     <button id="btn-send" class="btn-send">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
                     </button>
@@ -59,8 +60,6 @@
         </main>
     </div>
 
-    <script src="llm-service.js"></script>
-    <script src="preflight-engine.js"></script>
-    <script src="app.js"></script>
+    <script type="module" src="/src/app.ts"></script>
 </body>
 </html>

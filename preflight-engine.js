@@ -8,7 +8,8 @@ class VectorStore {
       "ui-standards": ["consistent", "style", "design", "layout", "css", "theme", "look and feel", "brand"],
       "clean-code": ["refactor", "standard", "clean", "quality", "patterns", "technical debt", "readable"],
       "auth-protocol": ["login", "security", "authentication", "permission", "access", "oauth", "password"],
-      "architecture": ["setup", "agent", "orchestration", "structure", "module", "system design"]
+      "architecture": ["setup", "agent", "orchestration", "structure", "module", "system design"],
+      "claude-agent": ["claude", "anthropic", "agent", "sonnet", "opus", "haiku", "tool use", "pre-flight"]
     };
   }
 
@@ -96,6 +97,44 @@ const PreFlightEngine = (function() {
     LOCAL_SKILL_BANK.push({ name, pattern, ref, efficiency: 10 });
     localStorage.setItem('preflight_skills', JSON.stringify(LOCAL_SKILL_BANK));
     return true;
+  }
+
+  const DEFAULT_LEARNING_MEMORY = {
+    checkpointPreference: 'adaptive',
+    outcomes: {}
+  };
+  let LEARNING_MEMORY = JSON.parse(localStorage.getItem('preflight_learning_memory')) || DEFAULT_LEARNING_MEMORY;
+
+  function persistLearningMemory() {
+    localStorage.setItem('preflight_learning_memory', JSON.stringify(LEARNING_MEMORY));
+  }
+
+  function getLearningProfile(taskType) {
+    const stats = LEARNING_MEMORY.outcomes[taskType] || { total: 0, success: 0, manual: 0 };
+    const successRate = stats.total > 0 ? Math.round((stats.success / stats.total) * 100) : 0;
+    return {
+      checkpointPreference: LEARNING_MEMORY.checkpointPreference || 'adaptive',
+      taskStats: stats,
+      successRate
+    };
+  }
+
+  function recordOutcome(taskType, outcome = 'success') {
+    if (!taskType) return;
+    if (!LEARNING_MEMORY.outcomes[taskType]) {
+      LEARNING_MEMORY.outcomes[taskType] = { total: 0, success: 0, manual: 0 };
+    }
+    LEARNING_MEMORY.outcomes[taskType].total += 1;
+    if (outcome === 'success') LEARNING_MEMORY.outcomes[taskType].success += 1;
+    if (outcome === 'manual') LEARNING_MEMORY.outcomes[taskType].manual += 1;
+    persistLearningMemory();
+  }
+
+  function setCheckpointPreference(mode = 'adaptive') {
+    const allowedModes = ['strict', 'adaptive', 'light'];
+    LEARNING_MEMORY.checkpointPreference = allowedModes.includes(mode) ? mode : 'adaptive';
+    persistLearningMemory();
+    return LEARNING_MEMORY.checkpointPreference;
   }
 
   const CONTEXT_PATTERNS = [
@@ -208,7 +247,7 @@ const PreFlightEngine = (function() {
     return constraints;
   }
 
-  function buildExecutionPlan(taskType, complexity, analysis = null) {
+  function buildExecutionPlan(taskType, complexity, analysis = null, checkpointPreference = 'adaptive') {
     const template = STEP_TEMPLATES[taskType] || STEP_TEMPLATES.simple_qa;
     const steps = template.map((s, idx) => {
       let step = { 
@@ -227,6 +266,7 @@ const PreFlightEngine = (function() {
       // Mimic skill injection logic
       if (analysis && analysis.contextTriggers && analysis.contextTriggers.length > 0) {
         if (idx === 0) {
+           const skillMatch = analysis.skillMatches && analysis.skillMatches.length > 0 ? analysis.skillMatches[0].ref : '/context-skill.md';
            step.skillRef = skillMatch;
            step.desc = `[Recalling Patterns] ${step.desc}`;
            step.reasoning = "Using saved operational context to skip redundant discovery phases and save tokens.";
@@ -241,70 +281,107 @@ const PreFlightEngine = (function() {
            step.reasoning = "Enforcing mission boundaries to prevent hallucination or unwanted side-effects.";
         }
       }
+
+      // Phase 2: risk-based runtime checkpoints
+      if (step.risk === 'high') {
+        step.checkpoint = true;
+        step.pauseReason = "High-risk operation detected. Approve before Claude Agent continues.";
+      } else if (step.risk === 'medium' && complexity.riskLevel === 'high') {
+        step.checkpoint = true;
+        step.pauseReason = "Medium-risk step in a high-risk mission. Confirm execution.";
+      } else if (step.checkpoint) {
+        step.pauseReason = "Strategic checkpoint: verify direction before proceeding.";
+      }
       
       return step;
     });
 
+    if (checkpointPreference === 'strict') {
+      steps.forEach(s => {
+        s.checkpoint = true;
+        if (!s.pauseReason) s.pauseReason = "Strict mode enabled. Approval required at each step.";
+      });
+    } else if (checkpointPreference === 'light') {
+      steps.forEach(s => {
+        if (s.risk !== 'high') {
+          s.checkpoint = false;
+          s.pauseReason = null;
+        }
+      });
+    }
+
     if (complexity.riskLevel === 'high') {
-      steps.forEach(s => { if (s.risk === 'medium' || s.risk === 'high') s.checkpoint = true; });
+      steps.forEach(s => {
+        if (s.risk === 'medium' || s.risk === 'high') {
+          s.checkpoint = true;
+          if (!s.pauseReason) {
+            s.pauseReason = "High-risk mission guardrail. Human approval required.";
+          }
+        }
+      });
     }
 
     return { steps, totalSteps: steps.length };
   }
 
-  function getOptimizationProfile(constraints, riskLevel, taskType, contextTriggers = [], skillMatches = []) {
-    const isHighRiskOrMultiStep = riskLevel === 'high' || taskType === 'multi_step' || taskType === 'code_gen';
+  function getOptimizationProfile(constraints, complexity, taskType, contextTriggers = [], skillMatches = []) {
+    const riskLevel = complexity?.riskLevel || 'low';
+    const wordCount = complexity?.wordCount || 0;
+    const stepCount = complexity?.stepCount || 1;
     const hasContext = contextTriggers.length > 0 || skillMatches.length > 0;
-    
-    if (isHighRiskOrMultiStep) {
-      const totalEfficiency = skillMatches.reduce((acc, s) => acc + s.efficiency, 0);
-      return {
-        description: hasContext ? "Delegated agentic flow with verified skill matches. Pattern recall reduces token overhead." : "Unstructured agentic flow — requires full exploration which increases token consumption.",
-        tokens: Math.max(10, (hasContext ? 20 : 35) - totalEfficiency),
-        quality: 95,
-        latency: hasContext ? 30 : 45,
-        bullets: hasContext ? [
-          "Minimize reasoning overhead using /skill workflows",
-          "Recall existing implementation patterns",
-          "Prioritize execution integrity over speed",
-          "Automated boundary verification"
-        ] : [
-          "Full exploration loop required",
-          "High token consumption for context-building",
-          "Manual intervention likely at checkpoints",
-          "Self-correction enabled"
-        ],
-        mode: "agent",
-        profileType: hasContext ? "balanced" : "quality"
-      };
-    } else if (taskType === 'simple_qa') {
-      return {
-        description: "Simple task detected. Optimizing for speed and minimal token usage.",
-        tokens: 15,
-        quality: 75,
-        latency: 10,
-        bullets: [
-          "Direct single-shot response",
-          "No planning phase required"
-        ],
-        mode: "manual",
-        profileType: "speed"
-      };
-    } else {
-      return {
-        description: "No strong signal either way — I'll keep tokens, quality, and speed in proportion.",
-        tokens: 65,
-        quality: 75,
-        latency: 65,
-        bullets: [
-          "Plan briefly, then execute",
-          "Verify only critical changes",
-          "Ask before destructive ops"
-        ],
-        mode: "agent",
-        profileType: "balanced"
-      };
-    }
+    const constraintCount = constraints.length;
+    const skillEfficiency = skillMatches.reduce((acc, s) => acc + (s.efficiency || 0), 0);
+    const isAgentic = !(taskType === 'simple_qa' && stepCount <= 1 && wordCount < 20);
+
+    const riskBoost = riskLevel === 'high' ? 25 : riskLevel === 'medium' ? 12 : 0;
+    const lengthBoost = Math.min(20, Math.floor(wordCount / 8));
+    const stepsBoost = Math.min(20, stepCount * 4);
+    const constraintsBoost = Math.min(15, constraintCount * 3);
+
+    const tokenLoad = Math.min(95, 10 + riskBoost + lengthBoost + stepsBoost + constraintsBoost - Math.min(20, Math.floor(skillEfficiency / 2)));
+    const latencyLoad = Math.min(95, 8 + Math.floor(riskBoost * 0.8) + Math.floor(lengthBoost * 0.7) + stepsBoost - (hasContext ? 8 : 0));
+    const qualityScore = Math.max(45, Math.min(98, 60 + (hasContext ? 18 : 0) + Math.min(15, constraintCount * 2) + (riskLevel === 'high' ? 8 : 0)));
+
+    return {
+      description: isAgentic
+        ? (hasContext
+          ? "Dynamic agentic routing with skill/context reuse to reduce blind-spot decisions."
+          : "Agentic route selected; adding planning and guardrails to improve predictability.")
+        : "Prompt-only route selected for a lightweight task.",
+      tokens: tokenLoad,
+      quality: qualityScore,
+      latency: latencyLoad,
+      bullets: isAgentic ? [
+        "Metrics adapt to prompt length and complexity",
+        "Constraints are converted into execution guardrails",
+        "Skill suggestions reduce repetitive prompt overhead"
+      ] : [
+        "Simple prompt path keeps flow fast",
+        "Low orchestration overhead",
+        "Upgrade to agent mode when scope expands"
+      ],
+      mode: isAgentic ? "agent" : "manual",
+      profileType: isAgentic ? "balanced" : "speed"
+    };
+  }
+
+  function buildAgentSetupQuestions(prompt, taskType, constraints = [], systemLimits = []) {
+    const lowerPrompt = prompt.toLowerCase();
+    const suggestedTools = [];
+    if (lowerPrompt.includes('file') || lowerPrompt.includes('refactor') || lowerPrompt.includes('code')) suggestedTools.push('File editing');
+    if (lowerPrompt.includes('debug') || lowerPrompt.includes('run') || lowerPrompt.includes('build')) suggestedTools.push('Terminal');
+    if (lowerPrompt.includes('research') || lowerPrompt.includes('api') || lowerPrompt.includes('docs')) suggestedTools.push('Web');
+    if (suggestedTools.length === 0) suggestedTools.push('File editing');
+
+    const guardrails = constraints.slice(0, 2).map(c => c.rule);
+    const defaultArea = taskType === 'code_gen' ? 'Frontend development' : taskType === 'debugging' ? 'Bug diagnosis and fixes' : 'General execution';
+
+    return [
+      { question: 'What is the primary role for this agent?', answer: 'Not answered yet' },
+      { question: 'Which domain should this agent specialize in?', answer: defaultArea },
+      { question: 'Which tools should be prioritized?', answer: suggestedTools.join(', ') },
+      { question: 'Any hard constraints to lock?', answer: guardrails.length > 0 ? guardrails.join(' | ') : (systemLimits.length > 0 ? systemLimits[0] : 'Not answered yet') }
+    ];
   }
 
   async function analyze(prompt, history = [], ignoredSkills = []) {
@@ -318,9 +395,20 @@ const PreFlightEngine = (function() {
         
         // 2. Identify Task Type & Objective
         const heuristicClassification = classifyTask(prompt);
-        const typeKey = llmResult?.taskType || heuristicClassification.type || 'code_gen';
+        const normalizedTaskMap = {
+            debug: 'debugging',
+            debugging: 'debugging',
+            code_gen: 'code_gen',
+            refactor: 'refactor',
+            multi_step: 'multi_step',
+            analysis: 'analysis',
+            research: 'research',
+            simple_qa: 'simple_qa'
+        };
+        const llmTaskType = llmResult?.taskType ? String(llmResult.taskType).toLowerCase() : '';
+        const typeKey = normalizedTaskMap[llmTaskType] || heuristicClassification.type || 'code_gen';
         const typeConfig = TASK_PATTERNS[typeKey] || TASK_PATTERNS.code_gen;
-        const mission = llmResult?.mission || prompt.substring(0, 60) + '...';
+        const mission = llmResult?.mission || prompt;
 
         // 3. RAG Intent Engine (New AI-Native Layer)
         console.log("Performing RAG Retrieval from VectorStore...");
@@ -333,7 +421,8 @@ const PreFlightEngine = (function() {
             "ui-standards": { name: "UI Consistency", ref: "/ui-standards-skill.md", rationale: "RAG Match: Detected high UI/Design affinity. Injecting layout guardrails to save tokens." },
             "clean-code": { name: "Coding Standards", ref: "/clean-code-skill.md", rationale: "RAG Match: Semantic link to quality patterns found. Enforcing clean code constraints." },
             "auth-protocol": { name: "Security Protocol", ref: "/auth-skill.md", rationale: "RAG Match: Security-related intent identified. Standardizing auth implementation." },
-            "architecture": { name: "Architecture Guardrails", ref: "/arch-skill.md", rationale: "RAG Match: Agent setup mission detected. Forcing structural reviews." }
+            "architecture": { name: "Architecture Guardrails", ref: "/arch-skill.md", rationale: "RAG Match: Agent setup mission detected. Forcing structural reviews." },
+            "claude-agent": { name: "Claude Agent Guardrails", ref: "/claude-agent-skill.md", rationale: "RAG Match: Claude Agent workflow detected. Enforcing checkpoint-first delegation." }
         };
 
         retrievedIntents.forEach(intent => {
@@ -353,6 +442,8 @@ const PreFlightEngine = (function() {
 
         const complexity = estimateComplexity(prompt, typeKey);
         let mergedConstraints = extractConstraints(prompt);
+        const systemLimits = llmResult?.systemLimits || [];
+        const learningProfile = getLearningProfile(typeKey);
 
         if (llmResult?.userConstraints) {
             llmResult.userConstraints.forEach(rule => {
@@ -392,22 +483,28 @@ const PreFlightEngine = (function() {
         const allSuggestions = [...suggestedSkills, ...newSkills];
 
         // 5. Build Final Execution Assets
-        const finalExecutionPlan = buildExecutionPlan(typeKey, complexity, { skillMatches, constraints: mergedConstraints });
-        const optimizationProfile = getOptimizationProfile(mergedConstraints, complexity.riskLevel, typeKey, [], skillMatches);
+        const finalExecutionPlan = buildExecutionPlan(typeKey, complexity, { skillMatches, constraints: mergedConstraints }, learningProfile.checkpointPreference);
+        const optimizationProfile = getOptimizationProfile(mergedConstraints, complexity, typeKey, [], skillMatches);
+        const agentSetupQuestions = buildAgentSetupQuestions(prompt, typeKey, mergedConstraints, systemLimits);
 
         // 6. Recommendation logic
         let confidence = 85;
         let reasoning = "";
         if (optimizationProfile.mode === 'agent') {
-            reasoning = "Complex mission detected. Delegating to an agent loop reduces manual overhead by 80%.";
+            reasoning = "Complex mission detected. Delegating to a Claude Agent loop reduces manual overhead by 80%.";
             if (skillMatches.length > 0) reasoning += " Applying saved /skill workflows to optimize accuracy.";
             if (systemLimits.length > 0) reasoning += ` Managing identified system limits: ${systemLimits.join(', ')}.`;
+            // Historical success rate intentionally omitted to keep reasoning concise
         } else {
-            reasoning = "Deterministic task. Direct execution ensures immediate delivery.";
+            reasoning = "Deterministic task. Manual Claude prompting ensures immediate delivery.";
         }
+
+        if (learningProfile.checkpointPreference === 'strict') confidence = Math.min(99, confidence + 5);
+        if (learningProfile.checkpointPreference === 'light') confidence = Math.max(50, confidence - 5);
 
         return {
             id: 'pf_' + Date.now(),
+            platform: 'Claude',
             prompt,
             mission,
             leadAgent,
@@ -419,6 +516,8 @@ const PreFlightEngine = (function() {
             constraints: mergedConstraints,
             skillMatches,
             suggestedSkills: allSuggestions,
+            agentSetupQuestions,
+            learningProfile,
             executionPlan: finalExecutionPlan,
             optimizationProfile,
             recommendation: {
@@ -442,6 +541,8 @@ const PreFlightEngine = (function() {
             constraints: [],
             skillMatches: [],
             suggestedSkills: [],
+            agentSetupQuestions: [],
+            learningProfile: getLearningProfile('code_gen'),
             executionPlan: { steps: [] },
             optimizationProfile: { tokens: 50, quality: 50, latency: 50, bullets: ["Standard execution path"], mode: "agent" },
             recommendation: { mode: "agent", confidence: 50, reasoning: "Error in analysis engine. Using safe defaults." }
@@ -449,5 +550,5 @@ const PreFlightEngine = (function() {
     }
   }
 
-  return { analyze, saveNewSkill };
+  return { analyze, saveNewSkill, recordOutcome, setCheckpointPreference, getLearningProfile };
 })();

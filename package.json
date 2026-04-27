@@ -1,0 +1,37 @@
+{
+  "name": "nl-grad-project-agent-preflight",
+  "version": "1.0.0",
+  "description": "> **Product Solution for Claude's Agentic Capability Adoption** > Submitted as part of the Growth PM Lens — Anthropic",
+  "main": "app.js",
+  "scripts": {
+    "dev": "concurrently \"npm run server\" \"vite\"",
+    "server": "tsx watch server.ts",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/a-poorv/agent-preflight.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "module",
+  "bugs": {
+    "url": "https://github.com/a-poorv/agent-preflight/issues"
+  },
+  "homepage": "https://github.com/a-poorv/agent-preflight#readme",
+  "devDependencies": {
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.6",
+    "@types/node": "^25.6.0",
+    "concurrently": "^9.2.1",
+    "tsx": "^4.21.0",
+    "typescript": "^6.0.3",
+    "vite": "^8.0.10"
+  },
+  "dependencies": {
+    "cors": "^2.8.6",
+    "express": "^5.2.1"
+  }
+}

@@ -1,0 +1,26 @@
+[
+  {
+    "name": "Home Page Patterns",
+    "pattern": "home page",
+    "ref": "/home-skill.md",
+    "efficiency": 15
+  },
+  {
+    "name": "Auth Protocol",
+    "pattern": "login|auth|sign up",
+    "ref": "/auth-skill.md",
+    "efficiency": 20
+  },
+  {
+    "name": "UI Standards",
+    "pattern": "design|layout|css|style",
+    "ref": "/ui-skill.md",
+    "efficiency": 10
+  },
+  {
+    "efficiency": 10,
+    "name": "UI Consistency",
+    "pattern": "ui-standards",
+    "ref": "/ui-standards-skill.md"
+  }
+]

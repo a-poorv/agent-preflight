@@ -23,6 +23,9 @@ const App = (function() {
   let promptHistory = [];
   let acceptedSkills = new Set();
   let ignoredSkills = new Set();
+  let runtimeIntervention = null;
+  let confidenceTrend = [];
+  let activeMode = 'chat';
 
   function init() {
     renderQuickPrompts();
@@ -95,7 +98,7 @@ const App = (function() {
     // Add loading state (Agentic RAG Status)
     DOM.messagesArea.innerHTML = `<div style="padding: 40px; text-align: center; color: var(--text-muted);">
         <div class="ar-dot" style="width:12px; height:12px; background:var(--accent-orange); border-radius:50%; margin:0 auto 16px; animation: pulse 1.5s infinite;"></div>
-        <div style="font-size: 11px; font-weight: 700; letter-spacing: 1px; color: var(--text-muted); margin-bottom: 8px; text-transform: uppercase;">Agentic Orchestration Active</div>
+        <div style="font-size: 11px; font-weight: 700; letter-spacing: 1px; color: var(--text-muted); margin-bottom: 8px; text-transform: uppercase;">Claude Agent Orchestration Active</div>
         <div id="loader-status" style="font-size: 14px; font-weight: 500;">Performing RAG retrieval from Skill Bank...</div>
     </div>`;
     
@@ -142,208 +145,180 @@ const App = (function() {
     return s.charAt(0).toUpperCase() + s.slice(1);
   }
 
+  function toLevel(value) {
+    const numeric = Number(value);
+    if (Number.isNaN(numeric)) return 'Medium';
+    if (numeric >= 70) return 'High';
+    if (numeric >= 40) return 'Medium';
+    return 'Low';
+  }
+
+  function driftToLevel(score) {
+    if (score >= 0.6) return 'High';
+    if (score >= 0.45) return 'Medium';
+    return 'Low';
+  }
+
+  function renderModeTabs(mode = 'chat') {
+    const chatActive = mode === 'chat';
+    const codeActive = mode === 'code';
+    return `
+      <div style="display:inline-flex; background:#EBE8E0; border-radius:10px; padding:4px; gap:4px; margin-bottom:12px;">
+        <span style="font-size:12px; font-weight:700; letter-spacing:0.3px; padding:6px 10px; border-radius:7px; color:${chatActive ? '#FFFFFF' : '#6B6863'}; background:${chatActive ? '#2D2A26' : 'transparent'};">CHAT</span>
+        <span style="font-size:12px; font-weight:700; letter-spacing:0.3px; padding:6px 10px; border-radius:7px; color:${codeActive ? '#FFFFFF' : '#6B6863'}; background:${codeActive ? '#2D2A26' : 'transparent'};">CLAUDE CODE</span>
+      </div>
+    `;
+  }
+
+  function buildManualResponse(analysis) {
+    const missionText = analysis?.mission || lastSubmittedPrompt;
+    const topConstraints = (analysis?.constraints || []).slice(0, 2).map(c => c.rule);
+    if (topConstraints.length > 0) {
+      return `Here is a direct chat response for: "${missionText}". I will follow your constraints: ${topConstraints.join(' | ')}.`;
+    }
+    return `Here is a direct chat response for: "${missionText}". I will keep this in simple prompt mode without agent orchestration.`;
+  }
+
   function renderPreFlightCard(analysis) {
-    const { mission, complexity, constraints, executionPlan, recommendation, optimizationProfile, systemLimits } = analysis;
+    const { mission, complexity, constraints, executionPlan, recommendation, optimizationProfile, systemLimits, agentSetupQuestions } = analysis;
+    const confidenceRaw = recommendation.confidence > 1 ? recommendation.confidence : Math.round(recommendation.confidence * 100);
+    const confidenceLevel = toLevel(confidenceRaw);
+    const decisionText = recommendation.mode === 'agent' ? 'Use Claude Agent' : 'Stay in Manual Prompting';
+    const shortWhy = recommendation.reasoning || 'Best available route based on intent and constraints.';
+    const constraintChips = constraints.slice(0, 4);
+    const topSkillSuggestion = analysis.suggestedSkills && analysis.suggestedSkills.length > 0 ? analysis.suggestedSkills[0] : null;
 
     let html = `<div class="message" style="flex-direction: column; align-items: center; gap: 8px; width: 100%;">`;
-    
-    // 1. Mission Dashboard Header
     html += `
-      <div class="mission-dashboard" style="width: 100%; max-width: 900px; background: white; border: 1px solid var(--border-light); border-radius: 24px; overflow: hidden; box-shadow: 0 12px 40px rgba(0,0,0,0.08); margin-bottom: 40px;">
-        <div style="background: #F9F9F8; padding: 24px 32px; border-bottom: 1px solid var(--border-light);">
-          <div style="display: flex; justify-content: space-between; align-items: flex-start;">
-            <div style="flex: 1; padding-right: 24px;">
-              <div style="font-size: 11px; font-weight: 700; color: var(--text-muted); letter-spacing: 1px; text-transform: uppercase; margin-bottom: 8px;">Mission Intent</div>
-              <h1 style="margin: 0; font-size: 22px; font-weight: 600; color: var(--text-main); font-family: var(--font-serif); line-height: 1.3;">${mission}</h1>
-            </div>
-            <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 8px; flex-shrink: 0;">
-              <div style="background: white; padding: 8px 16px; border-radius: 12px; border: 1px solid var(--border-light); display: flex; align-items: center; gap: 10px;">
-                ${complexity.riskLevel === 'high' ? '<span style="font-size: 10px; font-weight: 700; color: #D96C51; background: #FFF9F2; padding: 4px 8px; border-radius: 6px;">DISCOVERY</span>' : ''}
-                <span style="font-size: 20px;">${analysis.taskIcon}</span>
-                <span style="font-size: 14px; font-weight: 600; color: var(--text-main);">${analysis.taskLabel}</span>
-              </div>
-              ${analysis.leadAgent ? `
-                <div style="display: flex; align-items: center; gap: 6px; font-size: 11px; font-weight: 700; color: #3D8B63; background: #EBF4EF; padding: 4px 10px; border-radius: 8px; border: 1px solid #D1E7DD;">
-                  <span>${analysis.leadAgent.icon}</span>
-                  <span>${analysis.leadAgent.id.toUpperCase()} ACTIVE</span>
-                </div>
-              ` : ''}
-            </div>
-          </div>
-          ${analysis.leadAgent ? `
-            <div style="margin-top: 16px; font-size: 12px; color: #475569; background: rgba(61, 139, 99, 0.05); padding: 8px 16px; border-radius: 8px; border-left: 3px solid #3D8B63;">
-              <strong>Lead Directive:</strong> ${analysis.leadAgent.directive}
-            </div>
-          ` : ''}
+      <div id="agent-card-container" style="width:100%; max-width:820px; display:flex; flex-direction:column; align-items:flex-start;">
+        ${renderModeTabs('chat')}
+        <div class="mission-dashboard" style="width: 100%; background: white; border: 1px solid var(--border-light); border-radius: 20px; overflow: hidden; box-shadow: 0 8px 28px rgba(0,0,0,0.06); margin-bottom: 36px;">
+        <div style="background: #F9F9F8; padding: 20px 24px; border-bottom: 1px solid var(--border-light);">
+          <div style="font-size: 10px; font-weight: 700; color: var(--text-muted); letter-spacing: 0.8px; text-transform: uppercase; margin-bottom: 6px;">Claude Agent Compass</div>
+          <h2 style="margin: 0; font-size: 20px; font-weight: 600; color: var(--text-main); font-family: var(--font-serif); line-height: 1.35;">${mission}</h2>
         </div>
 
-        <div style="padding: 32px;">
-          <!-- 2. System Limits Section -->
-          ${systemLimits.length > 0 ? `
-            <div style="margin-bottom: 24px; padding: 16px; background: #FFF9F2; border: 1px solid #FFE8D1; border-radius: 16px;">
-              <div style="font-size: 11px; font-weight: 700; color: #D96C51; letter-spacing: 0.5px; margin-bottom: 8px;">SYSTEM LIMITS DETECTED</div>
-              <div style="display: flex; gap: 8px; flex-wrap: wrap;">
-                ${systemLimits.map(limit => `
-                  <span style="background: white; border: 1px solid #FFE8D1; color: #A34B36; padding: 4px 10px; border-radius: 8px; font-size: 12px; font-weight: 500;">
-                    ${limit}
-                  </span>
-                `).join('')}
-              </div>
+        <div style="padding: 24px;">
+          <div style="border: 1px solid var(--border-light); border-radius: 14px; padding: 16px; background: #FCFCFB; margin-bottom: 14px;">
+            <div style="display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:8px;">
+              <div style="font-size: 11px; font-weight: 700; color: var(--text-muted); letter-spacing: 0.6px; text-transform: uppercase;">Recommendation</div>
+              <div style="font-size:12px; color:#6B6863;">Confidence ${confidenceLevel}</div>
             </div>
-          ` : ''}
-
-          <!-- 2.5 Discovery Phase (Clarifying Questions) -->
-          ${complexity.riskLevel === 'high' ? `
-            <div style="margin-bottom: 24px; padding: 20px; background: #F8F9FB; border: 1px solid #E2E8F0; border-radius: 16px;">
-              <div style="font-size: 11px; font-weight: 700; color: #475569; letter-spacing: 0.5px; margin-bottom: 12px;">DISCOVERY PHASE: CLARIFYING QUESTIONS</div>
-              <div style="display: flex; flex-direction: column; gap: 12px;">
-                <div style="font-size: 13px; color: #1E293B; background: white; padding: 10px 14px; border-radius: 8px; border: 1px solid #E2E8F0;">
-                  <strong>Q:</strong> What is the primary role or specialization for this agent?
-                </div>
-                <div style="font-size: 13px; color: #1E293B; background: white; padding: 10px 14px; border-radius: 8px; border: 1px solid #E2E8F0;">
-                  <strong>Q:</strong> Which tool categories (File editing, Terminal, Web) should be prioritized?
-                </div>
-              </div>
-              <div style="margin-top: 12px; font-size: 12px; color: #64748B; font-style: italic;">
-                Tip: Answering these in your next prompt will highly optimize the /skill.md creation.
-              </div>
-            </div>
-          ` : ''}
-          <div style="display: flex; gap: 24px; padding: 20px; background: #FBFBFB; border: 1px solid var(--border-light); border-radius: 16px; margin-bottom: 32px;">
-            <div style="flex: 1; border-right: 1px solid var(--border-light); padding-right: 16px;">
-              <div style="font-size: 10px; font-weight: 700; color: var(--text-muted); letter-spacing: 0.5px; margin-bottom: 8px;">COMPLEXITY</div>
-              <div style="font-family: var(--font-serif); font-size: 20px; font-weight: 500; color: var(--text-main);">${capitalize(complexity.contextLoad)}</div>
-            </div>
-            <div style="flex: 1; border-right: 1px solid var(--border-light); padding: 0 16px;">
-              <div style="font-size: 10px; font-weight: 700; color: var(--text-muted); letter-spacing: 0.5px; margin-bottom: 8px;">STEPS</div>
-              <div style="font-family: var(--font-serif); font-size: 20px; font-weight: 500; color: var(--text-main);">${executionPlan.totalSteps || executionPlan.steps.length}</div>
-            </div>
-            <div style="flex: 1; padding-left: 16px;">
-              <div style="font-size: 10px; font-weight: 700; color: var(--text-muted); letter-spacing: 0.5px; margin-bottom: 8px;">CONFIDENCE</div>
-              <div style="font-family: var(--font-serif); font-size: 20px; font-weight: 500; color: var(--text-main);">${recommendation.confidence > 1 ? recommendation.confidence : Math.round(recommendation.confidence * 100)}%</div>
+            <div style="font-size: 18px; font-weight: 600; color: var(--text-main); margin-bottom: 6px;">${decisionText}</div>
+            <div style="font-size: 13px; color: var(--text-muted); line-height: 1.45;">${shortWhy}</div>
+            <div style="margin-top:10px; display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
+              <span style="font-size:11px; background:#F3F1EB; color:#4B4A46; border:1px solid #E4E1D8; padding:4px 8px; border-radius:8px;">Risk: ${capitalize(complexity.riskLevel)}</span>
+              <span style="font-size:11px; background:#F3F1EB; color:#4B4A46; border:1px solid #E4E1D8; padding:4px 8px; border-radius:8px;">Task: ${analysis.taskLabel}</span>
+              <span style="font-size:11px; background:#F3F1EB; color:#4B4A46; border:1px solid #E4E1D8; padding:4px 8px; border-radius:8px;">Steps: ${executionPlan.totalSteps || executionPlan.steps.length}</span>
+              ${acceptedSkills.size > 0 ? `<span style="font-size:11px; background:#FFF0EC; color:var(--accent-orange); border:1px solid #F5C9BC; padding:4px 10px; border-radius:8px; font-weight:600; display:inline-flex; align-items:center; gap:4px;"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"></polyline></svg> Skill optimized</span>` : ''}
             </div>
           </div>
 
-          <!-- 4. Intelligence / Skill Nudge -->
-          ${analysis.skillMatches && analysis.skillMatches.length > 0 ? `
-            <div class="skill-nudge" style="padding:20px; background:#EBF4EF; border:1px solid #D1E7DD; border-radius:16px; display:flex; align-items:center; gap:16px; margin-bottom: 32px;">
-              <div style="width:32px; height:32px; background:#3D8B63; color:white; border-radius:50%; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"></polyline></svg>
-              </div>
-              <div style="font-size:14px; color:#2E694B; font-weight:500; flex:1; display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
-                <span style="font-weight:700;">Intelligence applied:</span>
-                <span style="background:black; color:white; padding:2px 8px; border-radius:4px; font-family:var(--font-mono); font-size:11px; letter-spacing:0.5px;">${analysis.skillMatches[0].ref.replace('.md', '').toUpperCase()}.md</span>
-                <span style="color:rgba(46,105,75,0.7); font-size:13px;">based on operational patterns.</span>
-              </div>
-              <div style="display:flex; gap:8px;">
-                ${acceptedSkills.has(analysis.skillMatches[0].ref) ? `
-                  <span style="background:#3D8B63; color:white; padding:6px 16px; border-radius:8px; font-size:12px; font-weight:700;">Confirmed</span>
-                ` : `
-                  <button class="btn-nudge-action btn-discard-skill" style="padding:6px 12px; font-size:12px; background:transparent; border:1px solid #3D8B63; color:#3D8B63; border-radius:8px; cursor:pointer; font-weight:600;">Discard</button>
-                  <button class="btn-nudge-action btn-accept-skill" style="padding:6px 12px; font-size:12px; background:#3D8B63; border:1px solid #3D8B63; color:white; border-radius:8px; cursor:pointer; font-weight:600;">Accept</button>
-                `}
-              </div>
-            </div>
-          ` : ''}
-
-          <!-- 5. Suggested Skills (Discovery) -->
-          ${analysis.suggestedSkills && analysis.suggestedSkills.length > 0 ? 
-            analysis.suggestedSkills.map(skill => `
-            <div class="skill-suggestion-card" style="padding:24px; background:rgba(217,108,81,0.03); border:1px solid rgba(217,108,81,0.12); border-radius:20px; margin-bottom: 24px;">
-              <div style="display:flex; gap:16px; align-items:flex-start;">
-                <div style="width:40px; height:40px; background:var(--accent-orange); color:white; border-radius:50%; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"></path></svg>
-                </div>
-                <div style="flex:1;">
-                  <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:12px;">
-                    <div>
-                      <h4 style="margin:0 0 4px 0; font-size:18px; font-weight:600; font-family: var(--font-serif); color:var(--text-main);">Strategic Optimization Found</h4>
-                      <div style="display:flex; gap:8px;">
-                        <span style="font-size:10px; font-weight:700; color:var(--text-main); background:#F3F1EB; padding:3px 8px; border-radius:4px;">${skill.name.toUpperCase()}</span>
-                        <span style="font-size:10px; font-weight:700; color:#3D8B63; background:#EBF4EF; padding:3px 8px; border-radius:4px;">AI-NATIVE</span>
-                      </div>
-                    </div>
-                    <button class="btn btn-save-skill" style="padding:8px 20px; font-size:13px; font-weight:600; border:1px solid var(--accent-orange); color:var(--accent-orange); background:transparent; border-radius:10px; cursor:pointer;" 
-                      data-name="${skill.name.replace(/"/g, '&quot;')}" 
-                      data-pattern="${skill.pattern.replace(/"/g, '&quot;')}" 
-                      data-ref="${skill.ref.replace(/"/g, '&quot;')}">
-                      Save as /skill
-                    </button>
-                  </div>
-                  <p style="margin:12px 0; font-size:14px; color:var(--text-muted); line-height:1.5;">${skill.rationale || "I've identified an operational pattern that should be bundled into a deterministic workflow."}</p>
-                </div>
-              </div>
-            </div>
-            `).join('') : ''}
-
-          <!-- 6. Execution Plan Steps -->
-          <div style="margin-bottom: 32px;">
-            <div style="font-size: 11px; font-weight: 700; color: var(--text-muted); letter-spacing: 1px; margin-bottom: 20px;">STRATEGIC EXECUTION PLAN</div>
-            <div style="display: flex; flex-direction: column; gap: 20px;">
-              ${executionPlan.steps.map(step => `
-                <div style="display: flex; gap: 16px; align-items: flex-start;">
-                  <div style="width: 28px; height: 28px; border-radius: 50%; background: #F3F1EB; color: var(--text-muted); font-size: 12px; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">${step.id}</div>
-                  <div style="flex: 1;">
-                    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 4px;">
-                      <div style="font-size: 15px; font-weight: 600; color: var(--text-main);">${step.action}</div>
-                      ${step.checkpoint ? '<span style="font-size:9px; font-weight:700; background:rgba(236, 163, 53, 0.15); color:#A37B30; padding:2px 8px; border-radius:4px; letter-spacing:0.5px;">CHECKPOINT</span>' : ''}
-                    </div>
-                    <div style="font-size: 14px; color: var(--text-muted); line-height: 1.4;">${step.desc}</div>
-                    ${step.skillRef ? `
-                      <div style="margin-top: 8px; display: inline-flex; align-items: center; gap: 6px; background: black; color: white; padding: 4px 10px; border-radius: 6px; font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.5px;">
-                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"></path></svg>
-                        USING ${step.skillRef.toUpperCase()}
-                      </div>
-                    ` : ''}
-                    ${step.reasoning ? `
-                      <div style="margin-top: 6px; font-size: 12px; color: #3D8B63; font-style: italic; background: #F4F9F6; padding: 6px 10px; border-radius: 8px; border-left: 2px solid #3D8B63;">
-                        <strong>Planner reasoning:</strong> ${step.reasoning}
-                      </div>
-                    ` : ''}
-                  </div>
-                </div>
+          <div style="margin-bottom: 14px;">
+            <div style="font-size: 11px; font-weight: 700; color: var(--text-muted); letter-spacing: 0.6px; text-transform: uppercase; margin-bottom: 8px;">Detected Constraints</div>
+            <div style="display:flex; gap:8px; flex-wrap:wrap;">
+              ${constraintChips.length > 0 ? constraintChips.map(c => `
+                <span style="font-size:12px; background:#EEF4F0; color:#2E694B; border:1px solid #D1E7DD; padding:5px 10px; border-radius:999px;">${c.rule}</span>
+              `).join('') : '<span style="font-size:12px; color:var(--text-muted);">No explicit constraints detected.</span>'}
+              ${systemLimits.slice(0, 2).map(limit => `
+                <span style="font-size:12px; background:#FFF5F0; color:#A34B36; border:1px solid #F0D3C8; padding:5px 10px; border-radius:999px;">System: ${limit}</span>
               `).join('')}
             </div>
           </div>
 
-          <!-- 7. Optimization Profile (Collapsible) -->
-          <details style="border: 1px solid var(--border-light); border-radius: 20px; padding: 20px; background: #FBFBFB;">
-            <summary style="list-style: none; cursor: pointer; display: flex; justify-content: space-between; align-items: center; font-size: 11px; font-weight: 700; color: var(--text-muted); letter-spacing: 0.5px;">
-              OPTIMIZATION PROFILE
-              <span style="background: var(--accent-orange); color: white; padding: 4px 12px; border-radius: 8px; font-size: 11px; font-weight: 700;">+ Skill-optimized</span>
-            </summary>
-            <div style="margin-top: 24px;">
-              <div style="display: flex; gap: 16px; margin-bottom: 24px;">
-                <div style="flex: 1;">
-                  <div style="display: flex; justify-content: space-between; font-size: 10px; font-weight: 700; margin-bottom: 6px;"><span>TOKENS</span><span>${optimizationProfile.tokens}%</span></div>
-                  <div style="height: 4px; background: #EEE; border-radius: 2px; overflow: hidden;"><div style="height: 100%; width: ${optimizationProfile.tokens}%; background: var(--accent-orange);"></div></div>
+          ${topSkillSuggestion ? `
+            <div style="margin-bottom: 16px; border: 1px solid #F0D3C8; background: #FFF8F5; border-radius: 12px; padding: 14px;">
+              <div style="font-size: 11px; font-weight: 700; color: #A34B36; letter-spacing: 0.5px; text-transform: uppercase; margin-bottom: 6px;">Skill Opportunity</div>
+              <div style="font-size: 13px; color: #5C3A31; margin-bottom: 12px;">Auto-suggested: <strong>${topSkillSuggestion.name}</strong> — saves tokens and reduces retries on similar tasks.</div>
+              <div style="display:flex; gap:8px; align-items:center;">
+                <button class="btn btn-save-skill" style="padding:7px 14px; font-size:12px; font-weight:600; border:none; color:white; background:var(--accent-orange); border-radius:8px; cursor:pointer; display:flex; align-items:center; gap:5px;"
+                  data-name="${topSkillSuggestion.name.replace(/"/g, '&quot;')}"
+                  data-pattern="${topSkillSuggestion.pattern.replace(/"/g, '&quot;')}"
+                  data-ref="${topSkillSuggestion.ref.replace(/"/g, '&quot;')}">
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                  Add Skill
+                </button>
+                <button class="btn btn-edit-skill" style="padding:7px 14px; font-size:12px; font-weight:600; border:1px solid var(--border-light); color:var(--text-main); background:white; border-radius:8px; cursor:pointer;"
+                  data-ref="${topSkillSuggestion.ref.replace(/"/g, '&quot;')}">
+                  Edit
+                </button>
+                <button class="btn btn-discard-skill" style="padding:7px 14px; font-size:12px; font-weight:600; border:1px solid var(--border-light); color:var(--text-muted); background:white; border-radius:8px; cursor:pointer;"
+                  data-ref="${topSkillSuggestion.ref.replace(/"/g, '&quot;')}">
+                  Discard
+                </button>
+              </div>
+            </div>
+          ` : ''}
+
+          ${recommendation.mode === 'agent' ? `
+            <div style="margin-bottom: 16px; border: 1px solid #D1E7DD; background: #F4F9F6; border-radius: 12px; padding: 12px;">
+              <div style="font-size: 11px; font-weight: 700; color: #2E694B; letter-spacing: 0.5px; text-transform: uppercase; margin-bottom: 6px;">Agent Created</div>
+              <div style="font-size: 13px; color: #365748; margin-bottom: 10px;">I detected an agentic workflow from your prompt. Confirm these setup details to optimize execution and reduce blind spots.</div>
+              <div style="display:flex; flex-direction:column; gap:8px;">
+                ${(agentSetupQuestions || []).map(item => `
+                  <div style="background:white; border:1px solid #E3EFE8; border-radius:8px; padding:8px 10px;">
+                    <div style="font-size:12px; color:#4B5563; margin-bottom:2px;"><strong>Q:</strong> ${item.question}</div>
+                    <div style="font-size:13px; color:#1F2937;"><strong>A:</strong> ${item.answer}</div>
+                  </div>
+                `).join('')}
+              </div>
+            </div>
+          ` : ''}
+
+          <details style="border: 1px solid var(--border-light); border-radius: 12px; padding: 12px; background: #FBFBFB;">
+            <summary style="cursor: pointer; list-style: none; font-size: 12px; font-weight: 700; color: var(--text-muted); letter-spacing: 0.4px; text-transform: uppercase;">Show details</summary>
+            <div style="margin-top: 10px;">
+              <div style="font-size: 12px; color: #4B5563; margin-bottom: 10px;">Checkpointing is auto-managed by Claude Agent Compass based on risk.</div>
+              <div style="display: flex; flex-direction: column; gap: 8px;">
+                ${executionPlan.steps.map(step => `
+                  <div style="padding: 8px 10px; border:1px solid #ECE9E1; border-radius: 8px; background: white;">
+                    <div style="display:flex; justify-content:space-between; gap:8px;">
+                      <span style="font-size:13px; font-weight:600; color:#2D2A26;">${step.id}. ${step.action}</span>
+                      ${step.checkpoint ? '<span style="font-size:10px; color:#A37B30; background:#FFF5DD; padding:2px 6px; border-radius:6px;">CHECKPOINT</span>' : ''}
+                    </div>
+                    <div style="font-size:12px; color:#6B6863; margin-top:2px;">${step.desc}</div>
+                  </div>
+                `).join('')}
+              </div>
+              <div style="margin-top: 10px; display:flex; flex-direction:column; gap:10px;">
+                <div>
+                  <div style="display:flex; align-items:center; justify-content:space-between; font-size:11px; font-weight:700; letter-spacing:0.4px; color:#6B6863; margin-bottom:4px; text-transform:uppercase;">
+                    <span>Tokens</span>
+                    <span>${toLevel(optimizationProfile.tokens)}</span>
+                  </div>
+                  <div style="height:6px; background:#ECE9E1; border-radius:999px; overflow:hidden;">
+                    <div style="height:100%; width:${optimizationProfile.tokens}%; background:#D96C51; border-radius:999px;"></div>
+                  </div>
                 </div>
-                <div style="flex: 1;">
-                  <div style="display: flex; justify-content: space-between; font-size: 10px; font-weight: 700; margin-bottom: 6px;"><span>QUALITY</span><span>${optimizationProfile.quality}%</span></div>
-                  <div style="height: 4px; background: #EEE; border-radius: 2px; overflow: hidden;"><div style="height: 100%; width: ${optimizationProfile.quality}%; background: var(--accent-green);"></div></div>
+                <div>
+                  <div style="display:flex; align-items:center; justify-content:space-between; font-size:11px; font-weight:700; letter-spacing:0.4px; color:#6B6863; margin-bottom:4px; text-transform:uppercase;">
+                    <span>Quality</span>
+                    <span>${toLevel(optimizationProfile.quality)}</span>
+                  </div>
+                  <div style="height:6px; background:#ECE9E1; border-radius:999px; overflow:hidden;">
+                    <div style="height:100%; width:${optimizationProfile.quality}%; background:#3D8B63; border-radius:999px;"></div>
+                  </div>
                 </div>
-                <div style="flex: 1;">
-                  <div style="display: flex; justify-content: space-between; font-size: 10px; font-weight: 700; margin-bottom: 6px;"><span>LATENCY</span><span>${optimizationProfile.latency}%</span></div>
-                  <div style="height: 4px; background: #EEE; border-radius: 2px; overflow: hidden;"><div style="height: 100%; width: ${optimizationProfile.latency}%; background: #999;"></div></div>
+                <div>
+                  <div style="display:flex; align-items:center; justify-content:space-between; font-size:11px; font-weight:700; letter-spacing:0.4px; color:#6B6863; margin-bottom:4px; text-transform:uppercase;">
+                    <span>Latency</span>
+                    <span>${toLevel(optimizationProfile.latency)}</span>
+                  </div>
+                  <div style="height:6px; background:#ECE9E1; border-radius:999px; overflow:hidden;">
+                    <div style="height:100%; width:${optimizationProfile.latency}%; background:#ECA335; border-radius:999px;"></div>
+                  </div>
                 </div>
               </div>
-              <ul style="margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 10px;">
-                ${optimizationProfile.bullets.map(b => `
-                  <li style="font-size: 13px; color: var(--text-main); display: flex; gap: 8px; align-items: flex-start;">
-                    <span style="color: var(--accent-orange); margin-top: 3px;">•</span>
-                    ${b}
-                  </li>
-                `).join('')}
-              </ul>
             </div>
           </details>
 
-          <!-- 8. Actions Footer -->
-          <div style="display: flex; justify-content: center; gap: 16px; margin-top: 40px; padding-top: 32px; border-top: 1px solid var(--border-light);">
-            <button onclick="App.runAgent()" style="padding: 14px 40px; background: var(--accent-orange); color: white; border: none; border-radius: 14px; font-weight: 600; font-size: 15px; cursor: pointer; box-shadow: 0 4px 12px rgba(217, 108, 81, 0.25);">Proceed with Agent →</button>
-            <button onclick="App.modifyPrompt()" style="padding: 14px 28px; background: white; border: 1px solid var(--border-light); border-radius: 14px; font-weight: 600; font-size: 15px; color: var(--text-main); cursor: pointer;">Modify Mission</button>
+          <div style="display: flex; justify-content: center; gap: 12px; margin-top: 22px; padding-top: 18px; border-top: 1px solid var(--border-light);">
+            <button onclick="App.runAgent()" style="padding: 12px 26px; background: var(--accent-orange); color: white; border: none; border-radius: 12px; font-weight: 600; font-size: 14px; cursor: pointer;">Proceed with Claude Agent</button>
+            <button onclick="App.modifyPrompt()" style="padding: 12px 20px; background: white; border: 1px solid var(--border-light); border-radius: 12px; font-weight: 600; font-size: 14px; color: var(--text-main); cursor: pointer;">Modify Prompt</button>
+            <button onclick="App.runManual()" style="padding: 12px 20px; background: white; border: 1px solid var(--border-light); border-radius: 12px; font-weight: 600; font-size: 14px; color: var(--text-main); cursor: pointer;">Stay Manual</button>
           </div>
         </div>
+      </div>
       </div>
     `;
 
@@ -352,12 +327,12 @@ const App = (function() {
   }
 
   function renderAgentRunningCard(analysis, status = 'running') {
-    let html = `<div class="agent-running-card" style="width: 100%; max-width: 680px; background: white; border: 1px solid var(--border-light); border-radius: 16px; box-shadow: 0 4px 24px rgba(0,0,0,0.04); position:relative; overflow: hidden;">`;
-    const title = status === 'running' 
-        ? `<div class="ar-dot" style="width:8px; height:8px; background:var(--accent-orange); border-radius:50%; margin-right:12px; animation: pulse 1.5s infinite;"></div> <span style="font-size:18px; font-family:var(--font-serif); font-weight:500; color: var(--text-main);">Agent running</span>` 
-        : `<div style="color:#D96C51; display:inline-block; margin-right:12px; font-size:12px; opacity:0.6;">●</div> <span style="font-size:18px; font-family:var(--font-serif); font-weight:500; color: var(--text-main);">Execution complete</span>`;
-    
-    html += `<div class="ar-header" style="background: #FAF8F2; padding: 20px 24px; display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--border-light);">
+    let html = `<div class="agent-running-card" style="width: 100%; background: white; border: 1px solid var(--border-light); border-radius: 20px; box-shadow: 0 8px 28px rgba(0,0,0,0.06); position:relative; overflow: hidden; color: var(--text-main); margin-bottom: 36px;">`;
+    const title = status === 'running'
+        ? `<div class="ar-dot" style="width:8px; height:8px; background:var(--accent-orange); border-radius:50%; margin-right:12px; animation: pulse 1.5s infinite;"></div> <span style="font-size:18px; font-family:var(--font-serif); font-weight:500; color:var(--text-main);">Agent running</span>`
+        : `<div style="color:var(--accent-orange); display:inline-block; margin-right:12px; font-size:12px; opacity:0.8;">●</div> <span style="font-size:18px; font-family:var(--font-serif); font-weight:500; color:var(--text-main);">Execution complete</span>`;
+
+    html += `<div class="ar-header" style="background: #F9F9F8; padding: 20px 24px; display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--border-light);">
       <div style="display:flex; align-items:center;">${title}</div>
       <button class="btn-ghost" onclick="App.reset()" style="font-size:12px; padding:6px 12px; color:var(--text-muted); display:flex; gap:6px; align-items:center; font-weight:500;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.5 2v6h-6M2.13 15.57a10 10 0 1 0 3.43-11.44L2.5 8"></path></svg> New task</button>
     </div>`;
@@ -366,6 +341,7 @@ const App = (function() {
     // The optimization is already reflected in the step-level skill badges.
 
     html += `<div class="ar-content-inner" style="padding: 24px; display:flex; flex-direction:column; gap:16px;">`;
+    html += `<div id="runtime-intervention-zone"></div>`;
     html += `<div class="ar-steps" id="ar-steps" style="display:flex; flex-direction:column; gap:16px;">`;
     analysis.executionPlan.steps.forEach(step => {
       html += renderStep(step, 'pending');
@@ -397,9 +373,15 @@ const App = (function() {
         classes += ` paused`;
         containerStyle = `border: 1px solid #ECA33544; border-radius: 16px; padding: 20px; display: flex; gap: 16px; align-items: flex-start; background: #ECA33508; flex-direction: column;`;
         icon = `<div class="ar-icon" style="width:24px; height:24px; border-radius:50%; background:var(--accent-yellow); color:white; display:flex; align-items:center; justify-content:center; flex-shrink:0;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><rect x="6" y="4" width="4" height="16"></rect><rect x="14" y="4" width="4" height="16"></rect></svg></div>`;
-        extraHtml = `<div style="display:flex; align-items:center; gap:16px; width: 100%;">
+        extraHtml = `<div style="margin-top: 10px; margin-bottom: 12px; font-size: 12px; color: #8A6115; background: rgba(236, 163, 53, 0.12); border: 1px solid rgba(236, 163, 53, 0.25); border-radius: 8px; padding: 8px 10px;">
+            ${step.pauseReason || "Checkpoint reached. Review before continuing."}
+        </div>
+        <div style="display:flex; align-items:center; gap:16px; width: 100%;">
             <button class="btn" style="padding:10px 24px; font-size:14px; font-weight:600; border-radius:24px; background:#D96C51; color:white; border:none; cursor:pointer; display:flex; align-items:center; gap:8px;" onclick="App.continueExecution(${step.id})">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg> Approve & continue
+            </button>
+            <button class="btn" style="padding:10px 18px; font-size:13px; font-weight:600; border-radius:24px; background:white; color:#A34B36; border:1px solid #F0C7BA; cursor:pointer;" onclick="App.manualStep(${step.id})">
+              Switch this step to manual
             </button>
             <span style="font-size:13px; color:var(--text-muted);">Paused for your review</span>
         </div>`;
@@ -423,100 +405,238 @@ const App = (function() {
 
   function runAgent() {
     if (!currentAnalysis) return;
+    activeMode = 'code';
     isExecuting = true;
     currentStepIndex = 0;
+    runtimeIntervention = null;
+    confidenceTrend = [];
     
-    // Replace preflight card with a fresh Agentic Dashboard
-    const dashboard = document.querySelector('.mission-dashboard');
-    if (dashboard) {
-        dashboard.innerHTML = `
-          <div style="padding: 40px; text-align: center; background: white; border-radius: 24px; animation: fadeIn 0.5s ease-out;">
-            <div class="ar-dot" style="width:16px; height:16px; background:#3D8B63; border-radius:50%; margin:0 auto 20px; animation: pulse 1.5s infinite;"></div>
-            <div style="font-size: 11px; font-weight: 700; color: #3D8B63; letter-spacing: 1.5px; text-transform: uppercase; margin-bottom: 12px;">Agentic Orchestration Phase</div>
-            <h2 style="font-family: var(--font-serif); font-size: 24px; color: var(--text-main); margin: 0 0 16px 0;">Specialized Agent Creation</h2>
-            <p style="font-size: 15px; color: var(--text-muted); max-width: 500px; margin: 0 auto; line-height: 1.6;">
-              Based on your mission intent and strategic constraints, I am **creating a specialized ${currentAnalysis.leadAgent?.id || 'Task'} Agent** optimized for this specific execution.
-            </p>
-            <div style="margin-top: 24px; display: flex; justify-content: center; gap: 8px;">
+    const container = document.querySelector('#agent-card-container');
+    if (container) {
+        container.innerHTML = renderModeTabs('code') + `
+          <div class="mission-dashboard" style="width:100%; background:white; border:1px solid var(--border-light); border-radius:20px; overflow:hidden; box-shadow:0 8px 28px rgba(0,0,0,0.06); margin-bottom:36px;">
+            <div style="padding: 40px; text-align: center; animation: fadeIn 0.5s ease-out;">
+              <div class="ar-dot" style="width:16px; height:16px; background:#3D8B63; border-radius:50%; margin:0 auto 20px; animation: pulse 1.5s infinite;"></div>
+              <div style="font-size: 11px; font-weight: 700; color: #3D8B63; letter-spacing: 1.5px; text-transform: uppercase; margin-bottom: 12px;">Claude Agent Orchestration Phase</div>
+              <h2 style="font-family: var(--font-serif); font-size: 24px; color: var(--text-main); margin: 0 0 16px 0;">Specialized Agent Creation</h2>
+              <p style="font-size: 15px; color: var(--text-muted); max-width: 500px; margin: 0 auto; line-height: 1.6;">
+                Based on your mission intent and strategic constraints, I am creating a specialized ${currentAnalysis.leadAgent?.id || 'Task'} Claude Agent optimized for this specific execution.
+              </p>
+              <div style="margin-top: 24px; display: flex; justify-content: center; gap: 8px;">
                 <div style="padding: 6px 12px; background: #F4F9F6; color: #3D8B63; border-radius: 8px; font-size: 11px; font-weight: 700; border: 1px solid #D1E7DD;">
                   ${currentAnalysis.leadAgent?.icon || '🤖'} LEAD: ${currentAnalysis.leadAgent?.id.toUpperCase() || 'AGENT'}
                 </div>
                 ${currentAnalysis.skillMatches.length > 0 ? `
-                  <div style="padding: 6px 12px; background: black; color: white; border-radius: 8px; font-size: 11px; font-weight: 700;">
+                  <div style="padding: 6px 12px; background: #2D2A26; color: white; border-radius: 8px; font-size: 11px; font-weight: 700;">
                     SKILL-OPTIMIZED
                   </div>
                 ` : ''}
+              </div>
             </div>
           </div>
         `;
     }
-    
+
     scrollToBottom();
-    
+
     // Wait for "Creation" phase before starting steps
     setTimeout(() => {
-        if (dashboard) {
-            dashboard.innerHTML = renderAgentRunningCard(currentAnalysis, 'running');
+        if (container) {
+            container.innerHTML = renderModeTabs('code') + renderAgentRunningCard(currentAnalysis, 'running');
         }
         simulateExecution();
     }, 2500);
   }
 
   function simulateExecution() {
-    const steps = currentAnalysis.executionPlan.steps;
-    
-    function processStep() {
-        if (currentStepIndex >= steps.length) {
-            isExecuting = false;
-            const card = document.querySelector('.agent-running-card');
-            if (card) {
-                card.outerHTML = renderAgentRunningCard(currentAnalysis, 'complete');
-            }
-            scrollToBottom();
-            return;
-        }
-        
-        const step = steps[currentStepIndex];
-        const el = document.getElementById(`step-${step.id}`);
-        el.outerHTML = renderStep(step, 'running');
-        
-        setTimeout(() => {
-            if (step.checkpoint) {
-                document.getElementById(`step-${step.id}`).outerHTML = renderStep(step, 'paused');
-            } else {
-                document.getElementById(`step-${step.id}`).outerHTML = renderStep(step, 'done');
-                currentStepIndex++;
-                processStep();
-            }
-        }, 1500);
-    }
-    
-    setTimeout(processStep, 500);
+    setTimeout(runNextStep, 500);
   }
 
   function continueExecution(stepId) {
+      if (!currentAnalysis || !isExecuting) return;
       const step = currentAnalysis.executionPlan.steps.find(s => s.id === stepId);
-      document.getElementById(`step-${step.id}`).outerHTML = renderStep(step, 'done');
-      currentStepIndex++;
-      
-      const btnContainer = document.getElementById(`step-${step.id}`).querySelector('.ar-content');
-      if(btnContainer) {
-          // Extra elements removed in 'done' render
+      if (!step) return;
+
+      const stepEl = document.getElementById(`step-${step.id}`);
+      if (stepEl) {
+        stepEl.outerHTML = renderStep(step, 'done');
       }
-      
+
+      if (currentStepIndex < currentAnalysis.executionPlan.steps.length && currentAnalysis.executionPlan.steps[currentStepIndex].id === stepId) {
+        currentStepIndex++;
+      } else {
+        currentStepIndex = currentAnalysis.executionPlan.steps.findIndex(s => s.id === stepId) + 1;
+      }
+
       setTimeout(() => {
-          simulateExecution();
+        runNextStep();
       }, 500);
   }
 
+  function runNextStep() {
+    if (!currentAnalysis || !isExecuting) return;
+
+    const steps = currentAnalysis.executionPlan.steps;
+    if (currentStepIndex >= steps.length) {
+      isExecuting = false;
+      if (currentAnalysis?.taskType) {
+        PreFlightEngine.recordOutcome(currentAnalysis.taskType, 'success');
+      }
+      const card = document.querySelector('.agent-running-card');
+      if (card) {
+        card.outerHTML = renderAgentRunningCard(currentAnalysis, 'complete');
+      }
+      scrollToBottom();
+      return;
+    }
+
+    const step = steps[currentStepIndex];
+    const stepNode = document.getElementById(`step-${step.id}`);
+    if (!stepNode) return;
+
+    const intervention = evaluateRuntimeIntervention(step, currentStepIndex, steps.length, currentAnalysis.complexity?.riskLevel);
+    if (intervention) {
+      runtimeIntervention = intervention;
+      confidenceTrend.push(Math.max(0, 100 - Math.round(intervention.driftScore * 100)));
+      if (confidenceTrend.length > 16) confidenceTrend.shift();
+      renderRuntimeInterventionBanner(intervention);
+      if (intervention.escalateCheckpoint) {
+        step.checkpoint = true;
+        step.pauseReason = intervention.pauseReason;
+      }
+    } else {
+      runtimeIntervention = null;
+      renderRuntimeInterventionBanner(null);
+    }
+
+    stepNode.outerHTML = renderStep(step, 'running');
+    setTimeout(() => {
+      const rerendered = document.getElementById(`step-${step.id}`);
+      if (!rerendered) return;
+
+      if (step.checkpoint) {
+        rerendered.outerHTML = renderStep(step, 'paused');
+      } else {
+        rerendered.outerHTML = renderStep(step, 'done');
+        currentStepIndex++;
+        runNextStep();
+      }
+    }, 1400);
+  }
+
+  function evaluateRuntimeIntervention(step, index, totalSteps, missionRisk = 'low') {
+    const progressRatio = totalSteps > 0 ? index / totalSteps : 0;
+    const baseDrift = step.risk === 'high' ? 0.52 : step.risk === 'medium' ? 0.34 : 0.18;
+    const missionMultiplier = missionRisk === 'high' ? 1.25 : missionRisk === 'medium' ? 1.05 : 0.9;
+    const lateStagePressure = progressRatio > 0.65 ? 0.12 : 0;
+    const driftScore = Math.min(0.95, (baseDrift * missionMultiplier) + lateStagePressure);
+
+    if (driftScore >= 0.6) {
+      return {
+        level: 'high',
+        driftScore,
+        message: 'Confidence dropped during runtime. Escalating to human checkpoint before proceeding.',
+        recommendation: 'Review output, tighten constraints, or switch this step to manual execution.',
+        escalateCheckpoint: true,
+        pauseReason: `Phase 4 intervention: confidence drift (${driftToLevel(driftScore)}). Recommended fallback: review and refine before continuing.`
+      };
+    }
+
+    if (driftScore >= 0.45) {
+      return {
+        level: 'medium',
+        driftScore,
+        message: 'Potential execution drift detected. Suggested to verify assumptions at this step.',
+        recommendation: 'Optional fallback: add constraints or convert next step to a manual review.',
+        escalateCheckpoint: false,
+        pauseReason: null
+      };
+    }
+
+    return null;
+  }
+
+  function renderRuntimeInterventionBanner(intervention) {
+    const zone = document.getElementById('runtime-intervention-zone');
+    if (!zone) return;
+
+    if (!intervention) {
+      zone.innerHTML = '';
+      return;
+    }
+
+    const palette = intervention.level === 'high'
+      ? { bg: '#FFF5F2', border: '#F0C7BA', title: '#A34B36' }
+      : { bg: '#FFF9F0', border: '#F4DCB0', title: '#8A6115' };
+    const sparkline = buildConfidenceSparkline(confidenceTrend);
+    const driftLevel = driftToLevel(intervention.driftScore);
+
+    zone.innerHTML = `
+      <div style="padding: 12px 14px; border-radius: 10px; border: 1px solid ${palette.border}; background: ${palette.bg};">
+        <div style="font-size: 11px; font-weight: 700; letter-spacing: 0.4px; color: ${palette.title}; margin-bottom: 6px;">
+          PHASE 4: PROACTIVE INTERVENTION · DRIFT ${driftLevel}
+        </div>
+        <div style="font-size: 11px; color: #6B7280; margin-bottom: 6px; display:flex; align-items:center; gap:8px;">
+          <span>Confidence trend</span>
+          <span style="font-family: monospace; letter-spacing: -0.5px;">${sparkline}</span>
+        </div>
+        <div style="font-size: 13px; color: #4B5563; margin-bottom: 4px;">${intervention.message}</div>
+        <div style="font-size: 12px; color: #6B7280;">${intervention.recommendation}</div>
+      </div>
+    `;
+  }
+
+  function buildConfidenceSparkline(points) {
+    if (!points || points.length === 0) return '▁';
+    const levels = '▁▂▃▄▅▆▇█';
+    return points.map((p) => {
+      const normalized = Math.max(0, Math.min(100, p));
+      const index = Math.min(levels.length - 1, Math.floor((normalized / 100) * (levels.length - 1)));
+      return levels[index];
+    }).join('');
+  }
+
+  function manualStep(stepId) {
+    if (!currentAnalysis || !isExecuting) return;
+    const step = currentAnalysis.executionPlan.steps.find(s => s.id === stepId);
+    if (!step) return;
+    const stepEl = document.getElementById(`step-${step.id}`);
+    if (stepEl) {
+      stepEl.outerHTML = `
+        <div class="ar-step done" id="step-${step.id}" style="border: 1px solid #3D8B6322; border-radius: 16px; padding: 16px 20px; display: flex; gap: 16px; align-items: center; background: #3D8B6308;">
+          <div class="ar-icon" style="width:24px; height:24px; border-radius:50%; background:var(--accent-green); color:white; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"></polyline></svg>
+          </div>
+          <div class="ar-content" style="flex:1;">
+            <div style="display:flex; align-items:center; gap:8px;">
+              <h4 style="font-size:15px; font-weight:600; margin:0; color:var(--text-main);">${step.action}</h4>
+              <span style="font-size:9px; font-weight:700; background:rgba(163, 75, 54, 0.15); color:#A34B36; padding:2px 6px; border-radius:4px;">MANUAL OVERRIDE</span>
+            </div>
+            <p style="font-size:13px; color:var(--text-muted); margin:4px 0 0 0;">Step handled manually by user. Claude Agent will continue from next step.</p>
+          </div>
+        </div>
+      `;
+    }
+
+    const currentAt = currentAnalysis.executionPlan.steps.findIndex(s => s.id === stepId);
+    currentStepIndex = currentAt + 1;
+    setTimeout(() => runNextStep(), 350);
+  }
+
   function runManual() {
-    const container = document.querySelector('.preflight-card').parentNode;
-    container.innerHTML = `<div class="agent-running-card" style="text-align:center; padding: 40px;">
-        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="1.5" style="margin-bottom:16px;"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
-        <h3 style="font-family:var(--font-serif); font-size:24px; margin-bottom:8px;">Manual Mode Active</h3>
-        <p style="color:var(--text-muted); font-size:14px; max-width:400px; margin:0 auto;">Agent execution is disabled. You are now in a standard chat session. Type your instructions below to proceed manually.</p>
-        <button class="btn btn-secondary" onclick="App.reset()" style="margin: 24px auto 0;">Start over</button>
-    </div>`;
+    activeMode = 'chat';
+    if (currentAnalysis?.taskType) {
+      PreFlightEngine.recordOutcome(currentAnalysis.taskType, 'manual');
+    }
+    const container = document.querySelector('#agent-card-container');
+    if (!container) return;
+    container.innerHTML = renderModeTabs('chat') + `
+      <div class="agent-running-card" style="width:100%; background:white; border:1px solid var(--border-light); border-radius:20px; padding:22px; margin-bottom:36px;">
+        <div style="font-size:11px; font-weight:700; color:var(--text-muted); letter-spacing:0.6px; text-transform:uppercase; margin-bottom:8px;">Simple Chat Mode</div>
+        <div style="font-size:16px; font-weight:600; color:var(--text-main); margin-bottom:8px;">Stayed in manual prompting</div>
+        <div style="font-size:14px; color:var(--text-muted); line-height:1.6;">${buildManualResponse(currentAnalysis)}</div>
+      </div>
+    `;
     scrollToBottom();
   }
 
@@ -527,6 +647,8 @@ const App = (function() {
       currentAnalysis = null;
       isExecuting = false;
       currentStepIndex = 0;
+      runtimeIntervention = null;
+      confidenceTrend = [];
       
       if (repopulatePrompt) {
         DOM.promptInput.value = repopulatePrompt;
@@ -548,6 +670,7 @@ const App = (function() {
   }
 
   async function saveSkill(btn, name, pattern, ref) {
+    acceptedSkills.add(ref);
     PreFlightEngine.saveNewSkill(name, pattern, ref);
     
     btn.innerHTML = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"></polyline></svg> Skill added`;
@@ -603,7 +726,7 @@ const App = (function() {
     window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
   }
 
-  return { init, runAgent, runManual, continueExecution, reset, modifyPrompt, saveSkill, discardSkill, editSkill };
+  return { init, runAgent, runManual, continueExecution, reset, modifyPrompt, saveSkill, discardSkill, editSkill, manualStep };
 })();
 
 document.addEventListener('DOMContentLoaded', App.init);
