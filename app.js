@@ -426,14 +426,40 @@ const App = (function() {
     isExecuting = true;
     currentStepIndex = 0;
     
-    // Find only the card and replace it, keeping the prompt bubble above it
-    const card = document.querySelector('.preflight-card');
-    if (card) {
-      card.outerHTML = renderAgentRunningCard(currentAnalysis, 'running');
+    // Replace preflight card with a fresh Agentic Dashboard
+    const dashboard = document.querySelector('.mission-dashboard');
+    if (dashboard) {
+        dashboard.innerHTML = `
+          <div style="padding: 40px; text-align: center; background: white; border-radius: 24px; animation: fadeIn 0.5s ease-out;">
+            <div class="ar-dot" style="width:16px; height:16px; background:#3D8B63; border-radius:50%; margin:0 auto 20px; animation: pulse 1.5s infinite;"></div>
+            <div style="font-size: 11px; font-weight: 700; color: #3D8B63; letter-spacing: 1.5px; text-transform: uppercase; margin-bottom: 12px;">Agentic Orchestration Phase</div>
+            <h2 style="font-family: var(--font-serif); font-size: 24px; color: var(--text-main); margin: 0 0 16px 0;">Specialized Agent Creation</h2>
+            <p style="font-size: 15px; color: var(--text-muted); max-width: 500px; margin: 0 auto; line-height: 1.6;">
+              Based on your mission intent and strategic constraints, I am **creating a specialized ${currentAnalysis.leadAgent?.id || 'Task'} Agent** optimized for this specific execution.
+            </p>
+            <div style="margin-top: 24px; display: flex; justify-content: center; gap: 8px;">
+                <div style="padding: 6px 12px; background: #F4F9F6; color: #3D8B63; border-radius: 8px; font-size: 11px; font-weight: 700; border: 1px solid #D1E7DD;">
+                  ${currentAnalysis.leadAgent?.icon || '🤖'} LEAD: ${currentAnalysis.leadAgent?.id.toUpperCase() || 'AGENT'}
+                </div>
+                ${currentAnalysis.skillMatches.length > 0 ? `
+                  <div style="padding: 6px 12px; background: black; color: white; border-radius: 8px; font-size: 11px; font-weight: 700;">
+                    SKILL-OPTIMIZED
+                  </div>
+                ` : ''}
+            </div>
+          </div>
+        `;
     }
     
     scrollToBottom();
-    simulateExecution();
+    
+    // Wait for "Creation" phase before starting steps
+    setTimeout(() => {
+        if (dashboard) {
+            dashboard.innerHTML = renderAgentRunningCard(currentAnalysis, 'running');
+        }
+        simulateExecution();
+    }, 2500);
   }
 
   function simulateExecution() {
