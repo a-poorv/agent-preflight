@@ -16,9 +16,34 @@ const LLMService = (function() {
       return null; 
     }
 
+    const systemPrompt = `You are the Pre-Flight Execution Planner for an Agentic System.
+Design an optimized execution path by bifurcating input into:
+1. MISSION_INTENT: The core objective.
+2. SYSTEM_LIMITS: Potential bottlenecks (large file counts, complex refactors).
+3. USER_CONSTRAINTS: Explicit rules.
+4. STRATEGIC_SKILLS: Patterns for /.skill.md.
+
+Output valid JSON:
+{
+  "mission": "Core objective summary",
+  "taskType": "code_gen | refactor | debug | multi_step | analysis",
+  "systemLimits": ["list of bottlenecks"],
+  "userConstraints": ["extracted rules"],
+  "skill_candidate": {
+    "name": "Refined Name",
+    "pattern": "regex trigger",
+    "ref": "/name-skill.md",
+    "rationale": "Why this optimization helps"
+  }
+}`;
+
+    const userContent = history.length > 0 
+      ? `History: ${JSON.stringify(history.slice(-3))}\n\nCurrent Prompt: ${prompt}`
+      : prompt;
+
     try {
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 3500); // 3.5s strict timeout
+      const timeoutId = setTimeout(() => controller.abort(), 3500);
 
       const response = await fetch('https://api.openai.com/v1/chat/completions', {
         method: 'POST',
@@ -30,30 +55,10 @@ const LLMService = (function() {
         body: JSON.stringify({
           model: 'gpt-4o-mini',
           messages: [
-            {
-              role: 'system',
-              content: `Analyze this developer prompt and return a JSON object for a pre-flight check.
-        Focus on:
-        1. Task classification (debugging, refactor, etc.)
-        2. Complexity (Low/Medium/High)
-        3. Strategic steps (3-5 steps)
-        4. Operational Patterns: Identify reusable rules (e.g., 'don't change behavior', 'coding standards').
-        5. Skill Suggestion: If you see a recurring habit, suggest a name and pattern for a shortcut.
-
-        Return EXACTLY this JSON structure:
-        {
-          "type": "refactor",
-          "complexity": "Medium",
-          "confidence": 85,
-          "steps": [{"action": "Analyze", "desc": "...", "checkpoint": false}],
-          "constraints": ["don't change behavior", "propose 3 solutions"],
-          "reasoning": "...",
-          "skill_candidate": { "name": "Preserve Behavior", "pattern": "don't change behavior", "ref": "/behavior-guard.md" }
-        }`
-            },
-            ...history.map(h => ({ role: 'user', content: h })),
-            { role: 'user', content: prompt }
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: userContent }
           ],
+          temperature: 0.1,
           response_format: { type: "json_object" }
         })
       });

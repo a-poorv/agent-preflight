@@ -20,6 +20,7 @@ const App = (function() {
   let currentAnalysis = null;
   let currentStepIndex = 0;
   let lastSubmittedPrompt = '';
+  let promptHistory = [];
   let acceptedSkills = new Set();
   let ignoredSkills = new Set();
 
@@ -97,8 +98,12 @@ const App = (function() {
         Analyzing task with AI-native engine...
     </div>`;
     
-    currentAnalysis = await PreFlightEngine.analyze(prompt);
+    currentAnalysis = await PreFlightEngine.analyze(prompt, promptHistory, Array.from(ignoredSkills));
     
+    // Add to history for next time
+    promptHistory.push(prompt);
+    if (promptHistory.length > 5) promptHistory.shift();
+
     DOM.messagesArea.innerHTML = '';
     renderPreFlightCard(currentAnalysis);
     DOM.promptInput.value = '';
@@ -118,185 +123,175 @@ const App = (function() {
   }
 
   function renderPreFlightCard(analysis) {
-    const { complexity, constraints, executionPlan, recommendation, optimizationProfile } = analysis;
+    const { mission, complexity, constraints, executionPlan, recommendation, optimizationProfile, systemLimits } = analysis;
 
     let html = `<div class="message" style="flex-direction: column; align-items: center; gap: 8px; width: 100%;">`;
     
-    // User bubble
-    html += `<div class="message-user" style="background:#D96C51; color:white; padding:12px 24px; border-radius:24px; font-size:14px; max-width:90%; text-align:center; z-index: 10; position:relative; box-shadow: 0 4px 12px rgba(217, 108, 81, 0.2); margin-bottom: 24px;">${analysis.prompt}</div>`;
-
-    html += `<div class="preflight-card" style="width: 100%; max-width: 680px; background: white; border: 1px solid var(--border-light); border-radius: 16px; box-shadow: 0 4px 24px rgba(0,0,0,0.04); position:relative;">`;
-
-    const recBadgeText = recommendation.mode === 'skill' ? 'Skill recommended' : recommendation.mode === 'agent' ? 'Agent recommended' : 'Manual mode';
-    
-    html += `<div class="pf-header" style="display: block; background: #FAF8F2; padding: 24px 24px 20px; border-top-left-radius: 16px; border-top-right-radius: 16px; border-bottom: 1px solid var(--border-light);">
-      <div style="display: flex; justify-content: space-between; align-items: flex-start;">
-        <div style="display: flex; gap: 16px; align-items: center;">
-          <div style="width: 48px; height: 48px; background: ${analysis.color || '#ECA335'}; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
-            ${analysis.taskIcon}
-          </div>
-          <div>
-            <div style="font-size: 10px; font-weight: 700; color: var(--text-muted); letter-spacing: 1px; margin-bottom: 4px;">PRE-FLIGHT</div>
-            <h3 style="font-family: var(--font-serif); font-size: 28px; font-weight: 500; color: var(--text-main); margin: 0;">${analysis.taskLabel}</h3>
+    // 1. Mission Dashboard Header
+    html += `
+      <div class="mission-dashboard" style="width: 100%; max-width: 900px; background: white; border: 1px solid var(--border-light); border-radius: 24px; overflow: hidden; box-shadow: 0 12px 40px rgba(0,0,0,0.08); margin-bottom: 40px;">
+        <div style="background: #F9F9F8; padding: 24px 32px; border-bottom: 1px solid var(--border-light);">
+          <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+            <div style="flex: 1; padding-right: 24px;">
+              <div style="font-size: 11px; font-weight: 700; color: var(--text-muted); letter-spacing: 1px; text-transform: uppercase; margin-bottom: 8px;">Mission Intent</div>
+              <h1 style="margin: 0; font-size: 22px; font-weight: 600; color: var(--text-main); font-family: var(--font-serif); line-height: 1.3;">${mission}</h1>
+            </div>
+            <div style="background: white; padding: 10px 16px; border-radius: 12px; border: 1px solid var(--border-light); display: flex; align-items: center; gap: 10px; flex-shrink: 0;">
+              <span style="font-size: 20px;">${analysis.taskIcon}</span>
+              <span style="font-size: 14px; font-weight: 600; color: var(--text-main);">${analysis.taskLabel}</span>
+            </div>
           </div>
         </div>
-        <div style="background: ${optimizationProfile && optimizationProfile.profileType === 'quality' ? 'var(--accent-orange)' : '#D96C51'}; color: white; font-size: 12px; font-weight: 600; padding: 6px 14px; border-radius: 20px; white-space: nowrap; flex-shrink: 0;">${recBadgeText}</div>
-      </div>
-      <div style="margin-top: 20px; font-size: 14px; color: var(--text-muted);">
-        A ${analysis.taskLabel.toLowerCase()} of ${complexity.contextLoad} scope — ${recommendation.reasoning.split('.')[0]}.
-      </div>
-    </div>`;
 
-    html += `<div class="pf-meta" style="display: flex; padding: 20px 24px; border-bottom: 1px solid var(--border-light); margin: 0;">
-      <div style="flex: 1; border-right: 1px solid var(--border-light); padding-right: 16px;">
-        <div style="font-size: 10px; font-weight: 600; color: var(--text-muted); margin-bottom: 8px; display:flex; align-items:center; gap:4px;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg> COMPLEXITY</div>
-        <div style="font-family: var(--font-serif); font-size: 24px; color: var(--text-main);">${capitalize(complexity.contextLoad)}</div>
-      </div>
-      <div style="flex: 1; border-right: 1px solid var(--border-light); padding: 0 16px;">
-        <div style="font-size: 10px; font-weight: 600; color: var(--text-muted); margin-bottom: 8px; display:flex; align-items:center; gap:4px;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg> STEPS</div>
-        <div style="font-family: var(--font-serif); font-size: 24px; color: var(--text-main);">${complexity.stepCount}</div>
-      </div>
-      <div style="flex: 1; padding-left: 16px;">
-        <div style="font-size: 10px; font-weight: 600; color: var(--text-muted); margin-bottom: 8px; display:flex; align-items:center; gap:4px;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg> CONFIDENCE</div>
-        <div style="font-family: var(--font-serif); font-size: 24px; color: var(--text-main);">${Math.round(recommendation.confidence * 100)}%</div>
-      </div>
-    </div>`;
-
-    html += `<div class="pf-section" style="padding: 24px; border-bottom: 1px solid var(--border-light);">
-      <div style="font-size: 11px; font-weight: 600; letter-spacing: 0.5px; color: var(--text-muted); margin-bottom: 16px;">EXECUTION PLAN</div>
-      <div style="display: flex; flex-direction: column; gap: 16px;">`;
-    executionPlan.steps.forEach(step => {
-      html += `<div style="display: flex; gap: 12px; align-items: flex-start;">
-        <div style="width: 24px; height: 24px; border-radius: 50%; background: #F3F1EB; color: var(--text-muted); font-size: 11px; font-weight: 600; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">${step.id}</div>
-        <div>
-          <div style="font-size: 14px; font-weight: 500; color: var(--text-main); display: flex; align-items: center; gap: 8px;">${step.action} ${step.checkpoint ? '<span style="font-size:9px; font-weight:700; background:rgba(236, 163, 53, 0.15); color:var(--accent-yellow); padding:2px 6px; border-radius:4px;">CHECKPOINT</span>' : ''}</div>
-          <div style="font-size: 13px; color: var(--text-muted); margin-top: 2px;">${step.desc}</div>
-        </div>
-      </div>`;
-    });
-    html += `</div></div>`;
-
-    // Execution Guardrails
-    if (constraints.length > 0) {
-      html += `<div class="pf-section" style="border-bottom: none; padding-bottom: 24px;">
-        <div class="pf-section-title">EXECUTION GUARDRAILS</div>
-        <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 16px;">Strict rules I will follow to keep this agent on track.</div>
-        
-        <div style="display:flex; flex-direction:column; gap:16px;">
-          ${analysis.skillMatches && analysis.skillMatches.length > 0 ? `
-            <div class="skill-nudge" style="padding:16px; background:#EBF4EF; border:1px solid #D1E7DD; border-radius:16px; display:flex; align-items:center; gap:12px; margin-bottom: 8px;">
-              <div style="width:24px; height:24px; background:#3D8B63; color:white; border-radius:50%; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"></polyline></svg>
+        <div style="padding: 32px;">
+          <!-- 2. System Limits Section -->
+          ${systemLimits.length > 0 ? `
+            <div style="margin-bottom: 24px; padding: 16px; background: #FFF9F2; border: 1px solid #FFE8D1; border-radius: 16px;">
+              <div style="font-size: 11px; font-weight: 700; color: #D96C51; letter-spacing: 0.5px; margin-bottom: 8px;">SYSTEM LIMITS DETECTED</div>
+              <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                ${systemLimits.map(limit => `
+                  <span style="background: white; border: 1px solid #FFE8D1; color: #A34B36; padding: 4px 10px; border-radius: 8px; font-size: 12px; font-weight: 500;">
+                    ${limit}
+                  </span>
+                `).join('')}
               </div>
-              <div style="font-size:13px; color:#2E694B; font-weight:500; flex:1; display:flex; align-items:center; gap:8px;">
+            </div>
+          ` : ''}
+
+          <!-- 3. Planning Metadata Row -->
+          <div style="display: flex; gap: 24px; padding: 20px; background: #FBFBFB; border: 1px solid var(--border-light); border-radius: 16px; margin-bottom: 32px;">
+            <div style="flex: 1; border-right: 1px solid var(--border-light); padding-right: 16px;">
+              <div style="font-size: 10px; font-weight: 700; color: var(--text-muted); letter-spacing: 0.5px; margin-bottom: 8px;">COMPLEXITY</div>
+              <div style="font-family: var(--font-serif); font-size: 20px; font-weight: 500; color: var(--text-main);">${capitalize(complexity.contextLoad)}</div>
+            </div>
+            <div style="flex: 1; border-right: 1px solid var(--border-light); padding: 0 16px;">
+              <div style="font-size: 10px; font-weight: 700; color: var(--text-muted); letter-spacing: 0.5px; margin-bottom: 8px;">STEPS</div>
+              <div style="font-family: var(--font-serif); font-size: 20px; font-weight: 500; color: var(--text-main);">${executionPlan.totalSteps || executionPlan.steps.length}</div>
+            </div>
+            <div style="flex: 1; padding-left: 16px;">
+              <div style="font-size: 10px; font-weight: 700; color: var(--text-muted); letter-spacing: 0.5px; margin-bottom: 8px;">CONFIDENCE</div>
+              <div style="font-family: var(--font-serif); font-size: 20px; font-weight: 500; color: var(--text-main);">${Math.round(recommendation.confidence * 100)}%</div>
+            </div>
+          </div>
+
+          <!-- 4. Intelligence / Skill Nudge -->
+          ${analysis.skillMatches && analysis.skillMatches.length > 0 ? `
+            <div class="skill-nudge" style="padding:20px; background:#EBF4EF; border:1px solid #D1E7DD; border-radius:16px; display:flex; align-items:center; gap:16px; margin-bottom: 32px;">
+              <div style="width:32px; height:32px; background:#3D8B63; color:white; border-radius:50%; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"></polyline></svg>
+              </div>
+              <div style="font-size:14px; color:#2E694B; font-weight:500; flex:1; display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
                 <span style="font-weight:700;">Intelligence applied:</span>
                 <span style="background:black; color:white; padding:2px 8px; border-radius:4px; font-family:var(--font-mono); font-size:11px; letter-spacing:0.5px;">${analysis.skillMatches[0].ref.replace('.md', '').toUpperCase()}.md</span>
-                <span style="color:rgba(46,105,75,0.7); font-size:12px;">based on your operational preferences.</span>
+                <span style="color:rgba(46,105,75,0.7); font-size:13px;">based on operational patterns.</span>
               </div>
               <div style="display:flex; gap:8px;">
                 ${acceptedSkills.has(analysis.skillMatches[0].ref) ? `
-                  <span style="background:#3D8B63; color:white; padding:4px 12px; border-radius:6px; font-size:11px; font-weight:700;">Confirmed</span>
+                  <span style="background:#3D8B63; color:white; padding:6px 16px; border-radius:8px; font-size:12px; font-weight:700;">Confirmed</span>
                 ` : `
-                  <button class="btn-nudge-action btn-discard-skill" style="padding:4px 10px; font-size:11px; background:transparent; border:1px solid #3D8B63; color:#3D8B63; border-radius:6px; cursor:pointer;" data-ref="${analysis.skillMatches[0].ref}">Discard</button>
-                  <button class="btn-nudge-action btn-edit-skill" style="padding:4px 10px; font-size:11px; background:transparent; border:1px solid #3D8B63; color:#3D8B63; border-radius:6px; cursor:pointer;" data-ref="${analysis.skillMatches[0].ref}">Edit</button>
-                  <button class="btn-nudge-action btn-accept-skill" style="padding:4px 10px; font-size:11px; background:#3D8B63; border:1px solid #3D8B63; color:white; border-radius:6px; cursor:pointer;" data-ref="${analysis.skillMatches[0].ref}">Accept</button>
+                  <button class="btn-nudge-action btn-discard-skill" style="padding:6px 12px; font-size:12px; background:transparent; border:1px solid #3D8B63; color:#3D8B63; border-radius:8px; cursor:pointer; font-weight:600;">Discard</button>
+                  <button class="btn-nudge-action btn-accept-skill" style="padding:6px 12px; font-size:12px; background:#3D8B63; border:1px solid #3D8B63; color:white; border-radius:8px; cursor:pointer; font-weight:600;">Accept</button>
                 `}
               </div>
             </div>
           ` : ''}
-          
+
+          <!-- 5. Suggested Skills (Discovery) -->
           ${analysis.suggestedSkills && analysis.suggestedSkills.length > 0 ? `
-            <div class="skill-suggestion-card" style="padding:24px; background:rgba(217,108,81,0.03); border:1px solid rgba(217,108,81,0.12); border-radius:24px; margin-bottom: 24px;">
+            <div class="skill-suggestion-card" style="padding:24px; background:rgba(217,108,81,0.03); border:1px solid rgba(217,108,81,0.12); border-radius:20px; margin-bottom: 32px;">
               <div style="display:flex; gap:16px; align-items:flex-start;">
                 <div style="width:40px; height:40px; background:var(--accent-orange); color:white; border-radius:50%; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
                   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"></path></svg>
                 </div>
                 <div style="flex:1;">
-                  <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:8px;">
+                  <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:12px;">
                     <div>
-                      <h4 style="margin:0 0 8px 0; font-size:18px; font-weight:500; font-family:var(--font-serif); color:var(--text-main);">Save this as a one-click action</h4>
-                      <div style="display:flex; gap:8px; align-items:center;">
-                        <span style="font-size:10px; font-weight:700; color:var(--text-main); background:#F3F1EB; padding:3px 8px; border-radius:4px; letter-spacing:0.5px;">REUSABLE</span>
-                        <span style="font-size:10px; font-weight:700; color:#3D8B63; background:#EBF4EF; padding:3px 8px; border-radius:4px; letter-spacing:0.5px;">SET UP FOR YOU</span>
+                      <h4 style="margin:0 0 4px 0; font-size:18px; font-weight:600; font-family: var(--font-serif); color:var(--text-main);">Optimize this workflow</h4>
+                      <div style="display:flex; gap:8px;">
+                        <span style="font-size:10px; font-weight:700; color:var(--text-main); background:#F3F1EB; padding:3px 8px; border-radius:4px;">REUSABLE</span>
+                        <span style="font-size:10px; font-weight:700; color:#3D8B63; background:#EBF4EF; padding:3px 8px; border-radius:4px;">AI-POWERED</span>
                       </div>
                     </div>
-                    <button class="btn btn-save-skill" style="padding:8px 20px; font-size:13px; font-weight:600; border:1px solid var(--accent-orange); color:var(--accent-orange); background:transparent; border-radius:12px; cursor:pointer;" 
+                    <button class="btn btn-save-skill" style="padding:8px 20px; font-size:13px; font-weight:600; border:1px solid var(--accent-orange); color:var(--accent-orange); background:transparent; border-radius:10px; cursor:pointer;" 
                       data-name="${analysis.suggestedSkills[0].name.replace(/"/g, '&quot;')}" 
                       data-pattern="${analysis.suggestedSkills[0].pattern.replace(/"/g, '&quot;')}" 
                       data-ref="${analysis.suggestedSkills[0].ref.replace(/"/g, '&quot;')}">
                       Save as /skill
                     </button>
                   </div>
-                  <p style="margin:16px 0; font-size:14px; color:var(--text-muted); line-height:1.5;">I'll bundle the rules I use here into a reusable shortcut you can run again anytime.</p>
-                  <div style="display:flex; align-items:center; gap:8px; color:#3D8B63; font-size:14px; font-weight:500;">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"></path></svg>
-                    <span><strong>What you get:</strong> Next time, same job takes one click — no re-explaining.</span>
-                  </div>
+                  <p style="margin:12px 0; font-size:14px; color:var(--text-muted); line-height:1.5;">${analysis.suggestedSkills[0].rationale || "I've identified a pattern that should be bundled into a deterministic workflow."}</p>
                 </div>
               </div>
             </div>
           ` : ''}
 
-          ${constraints.map(c => `
-            <div class="constraint-item" style="display:flex; align-items:center; gap:12px; font-size:14px; color:var(--text-main); padding-left: 8px;">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--accent-green)" stroke-width="3"><polyline points="20 6 9 17 4 12"></polyline></svg>
-              ${c.rule}
+          <!-- 6. Execution Plan Steps -->
+          <div style="margin-bottom: 32px;">
+            <div style="font-size: 11px; font-weight: 700; color: var(--text-muted); letter-spacing: 1px; margin-bottom: 20px;">STRATEGIC EXECUTION PLAN</div>
+            <div style="display: flex; flex-direction: column; gap: 20px;">
+              ${executionPlan.steps.map(step => `
+                <div style="display: flex; gap: 16px; align-items: flex-start;">
+                  <div style="width: 28px; height: 28px; border-radius: 50%; background: #F3F1EB; color: var(--text-muted); font-size: 12px; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">${step.id}</div>
+                  <div style="flex: 1;">
+                    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 4px;">
+                      <div style="font-size: 15px; font-weight: 600; color: var(--text-main);">${step.action}</div>
+                      ${step.checkpoint ? '<span style="font-size:9px; font-weight:700; background:rgba(236, 163, 53, 0.15); color:#A37B30; padding:2px 8px; border-radius:4px; letter-spacing:0.5px;">CHECKPOINT</span>' : ''}
+                    </div>
+                    <div style="font-size: 14px; color: var(--text-muted); line-height: 1.4;">${step.desc}</div>
+                    ${step.skillRef ? `
+                      <div style="margin-top: 8px; display: inline-flex; align-items: center; gap: 6px; background: black; color: white; padding: 4px 10px; border-radius: 6px; font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.5px;">
+                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"></path></svg>
+                        USING ${step.skillRef.toUpperCase()}
+                      </div>
+                    ` : ''}
+                  </div>
+                </div>
+              `).join('')}
             </div>
-          `).join('')}
-        </div>
-      </div>`;
-    }
-
-    if (optimizationProfile) {
-      let optLabel = 'Balanced';
-      let optClass = 'opt-badge-balanced';
-      if (optimizationProfile.profileType === 'skill') { optLabel = 'Efficiency'; }
-      if (optimizationProfile.profileType === 'quality') { optLabel = 'Quality-optimized'; optClass = 'opt-badge-quality'; }
-      if (analysis.skillMatches.length > 0) { optLabel = 'Skill-optimized'; optClass = 'opt-badge-quality'; }
-
-      const badgeBg = optClass === 'opt-badge-quality' ? 'var(--accent-orange)' : '#F3F1EB';
-      const badgeColor = optClass === 'opt-badge-quality' ? '#FFF' : 'var(--text-main)';
-
-      html += `<div class="pf-section" style="padding-top: 0;">
-        <details style="border: 1px solid var(--border-light); border-radius: 16px; padding: 16px; background: #fff;">
-          <summary style="list-style: none; cursor: pointer; display: flex; justify-content: space-between; align-items: center; font-size: 12px; font-weight: 700; color: var(--text-muted); letter-spacing: 0.5px;">
-            OPTIMIZATION PROFILE
-            <span style="background: ${badgeBg}; color: ${badgeColor}; padding: 4px 10px; border-radius: 8px; display: flex; align-items: center; gap: 4px; text-transform: none; font-size: 11px; font-weight: 700;">
-              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M12 5v14M5 12h14"></path></svg> ${optLabel}
-            </span>
-          </summary>
-          <div style="margin-top: 20px;">
-            <div class="opt-bars">
-              <div class="opt-bar">
-                <div class="opt-bar-header"><span>TOKENS</span><span>${optimizationProfile.tokens}</span></div>
-                <div class="bar-track"><div class="bar-fill" style="width: ${optimizationProfile.tokens}%"></div></div>
-              </div>
-              <div class="opt-bar">
-                <div class="opt-bar-header"><span>QUALITY</span><span>${optimizationProfile.quality}</span></div>
-                <div class="bar-track"><div class="bar-fill" style="width: ${optimizationProfile.quality}%"></div></div>
-              </div>
-              <div class="opt-bar">
-                <div class="opt-bar-header"><span>LATENCY</span><span>${optimizationProfile.latency}</span></div>
-                <div class="bar-track"><div class="bar-fill" style="width: ${optimizationProfile.latency}%"></div></div>
-              </div>
-            </div>
-            <ul class="opt-bullets">
-              ${optimizationProfile.bullets.map(b => `<li>${b}</li>`).join('')}
-            </ul>
           </div>
-        </details>
-      </div>`;
 
-    }
+          <!-- 7. Optimization Profile (Collapsible) -->
+          <details style="border: 1px solid var(--border-light); border-radius: 20px; padding: 20px; background: #FBFBFB;">
+            <summary style="list-style: none; cursor: pointer; display: flex; justify-content: space-between; align-items: center; font-size: 11px; font-weight: 700; color: var(--text-muted); letter-spacing: 0.5px;">
+              OPTIMIZATION PROFILE
+              <span style="background: var(--accent-orange); color: white; padding: 4px 12px; border-radius: 8px; font-size: 11px; font-weight: 700;">+ Skill-optimized</span>
+            </summary>
+            <div style="margin-top: 24px;">
+              <div style="display: flex; gap: 16px; margin-bottom: 24px;">
+                <div style="flex: 1;">
+                  <div style="display: flex; justify-content: space-between; font-size: 10px; font-weight: 700; margin-bottom: 6px;"><span>TOKENS</span><span>${optimizationProfile.tokens}%</span></div>
+                  <div style="height: 4px; background: #EEE; border-radius: 2px; overflow: hidden;"><div style="height: 100%; width: ${optimizationProfile.tokens}%; background: var(--accent-orange);"></div></div>
+                </div>
+                <div style="flex: 1;">
+                  <div style="display: flex; justify-content: space-between; font-size: 10px; font-weight: 700; margin-bottom: 6px;"><span>QUALITY</span><span>${optimizationProfile.quality}%</span></div>
+                  <div style="height: 4px; background: #EEE; border-radius: 2px; overflow: hidden;"><div style="height: 100%; width: ${optimizationProfile.quality}%; background: var(--accent-green);"></div></div>
+                </div>
+                <div style="flex: 1;">
+                  <div style="display: flex; justify-content: space-between; font-size: 10px; font-weight: 700; margin-bottom: 6px;"><span>LATENCY</span><span>${optimizationProfile.latency}%</span></div>
+                  <div style="height: 4px; background: #EEE; border-radius: 2px; overflow: hidden;"><div style="height: 100%; width: ${optimizationProfile.latency}%; background: #999;"></div></div>
+                </div>
+              </div>
+              <ul style="margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 10px;">
+                ${optimizationProfile.bullets.map(b => `
+                  <li style="font-size: 13px; color: var(--text-main); display: flex; gap: 8px; align-items: flex-start;">
+                    <span style="color: var(--accent-orange); margin-top: 3px;">•</span>
+                    ${b}
+                  </li>
+                `).join('')}
+              </ul>
+            </div>
+          </details>
 
-    html += `<div class="pf-actions">
-      <button class="btn btn-primary" onclick="App.runAgent()">Proceed with Agent &rarr;</button>
-      <button class="btn btn-secondary" onclick="App.modifyPrompt()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg> Modify</button>
-      <button class="btn btn-ghost" onclick="App.runManual()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg> Manual mode</button>
-    </div>`;
+          <!-- 8. Actions Footer -->
+          <div style="display: flex; justify-content: center; gap: 16px; margin-top: 40px; padding-top: 32px; border-top: 1px solid var(--border-light);">
+            <button onclick="App.runAgent()" style="padding: 14px 40px; background: var(--accent-orange); color: white; border: none; border-radius: 14px; font-weight: 600; font-size: 15px; cursor: pointer; box-shadow: 0 4px 12px rgba(217, 108, 81, 0.25);">Proceed with Agent →</button>
+            <button onclick="App.modifyPrompt()" style="padding: 14px 28px; background: white; border: 1px solid var(--border-light); border-radius: 14px; font-weight: 600; font-size: 15px; color: var(--text-main); cursor: pointer;">Modify Mission</button>
+          </div>
+        </div>
+      </div>
+    `;
 
-    html += `</div></div>`; // end card and message wrapper
-
+    html += `</div>`;
     DOM.messagesArea.insertAdjacentHTML('beforeend', html);
   }
 

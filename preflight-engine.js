@@ -241,159 +241,109 @@ const PreFlightEngine = (function() {
   }
 
   async function analyze(prompt, history = [], ignoredSkills = []) {
+    console.log("Analyzing mission with history:", history.length);
     try {
-        // Attempt live LLM analysis if API key exists - with strict timeout
+        // 1. LLM Analysis (The Brain)
         let llmResult = null;
         if (typeof LLMService !== 'undefined' && LLMService.hasKey()) {
             llmResult = await LLMService.analyzePrompt(prompt, history);
         }
         
-        // 2. Identify Task Type (Merge LLM finding with Heuristic)
+        // 2. Identify Task Type & Objective
         const heuristicClassification = classifyTask(prompt);
-        const typeKey = llmResult?.type || heuristicClassification.type || 'code_gen';
+        const typeKey = llmResult?.taskType || heuristicClassification.type || 'code_gen';
         const typeConfig = TASK_PATTERNS[typeKey] || TASK_PATTERNS.code_gen;
+        const mission = llmResult?.mission || prompt.substring(0, 60) + '...';
 
-        // 3. Complexity Estimation
+        // 3. Complexity & Constraints
         const complexity = estimateComplexity(prompt, typeKey);
-
-        // 4. Extract Constraints (Heuristic + LLM bifurcation)
-        let constraints = extractConstraints(prompt);
-        if (llmResult?.constraints) {
-            llmResult.constraints.forEach(rule => {
-                if (!constraints.some(c => c.rule === rule)) {
-                    constraints.push({ type: 'explicit', rule });
+        
+        let mergedConstraints = extractConstraints(prompt);
+        if (llmResult?.userConstraints) {
+            llmResult.userConstraints.forEach(rule => {
+                if (!mergedConstraints.some(c => c.rule === rule)) {
+                    mergedConstraints.push({ type: 'explicit', rule });
                 }
             });
         }
-
-        // Add task-specific system guardrails
-        if (typeKey === 'simple_qa') {
-          constraints.push({ type: 'system', rule: 'Prioritize accuracy over length' });
-          constraints.push({ type: 'system', rule: 'Cite sources where applicable' });
-        } else {
-          constraints.push({ type: 'system', rule: 'Will ask for review before modifying critical files' });
+        
+        // System Limits (New AI-Native Layer)
+        const systemLimits = llmResult?.systemLimits || [];
+        if (typeKey !== 'simple_qa') {
+            mergedConstraints.push({ type: 'system', rule: 'Will ask for review before modifying critical files' });
         }
-        
-        const contextTriggers = [];
-        CONTEXT_PATTERNS.forEach(p => {
-          const matches = prompt.matchAll(p.regex);
-          for (const match of matches) {
-            contextTriggers.push({ type: p.type, rule: match[0] });
-          }
-        });
 
-        // Filter skill bank to exclude ignored skills
+        // 4. Pattern Recognition
         const activeSkillBank = LOCAL_SKILL_BANK.filter(s => !ignoredSkills.includes(s.ref));
-        
         const skillMatches = activeSkillBank.filter(s => new RegExp(s.pattern, 'i').test(prompt));
         
-        // Identify potential NEW skills (Heuristic + LLM candidate)
+        // Identify potential NEW skills
         const suggestedSkills = [];
+        const isPatternAlreadySaved = (pattern) => activeSkillBank.some(s => 
+            s.pattern.toLowerCase().includes(pattern.toLowerCase()) || 
+            pattern.toLowerCase().includes(s.pattern.toLowerCase())
+        );
         
-        // Helper to check if a pattern is already covered by existing skills
-        const isPatternAlreadySaved = (pattern) => {
-            return LOCAL_SKILL_BANK.some(s => 
-                s.pattern.toLowerCase().includes(pattern.toLowerCase()) || 
-                pattern.toLowerCase().includes(s.pattern.toLowerCase())
-            );
-        };
-        
-        // Priority 1: LLM Dynamic Suggestion
         if (llmResult?.skill_candidate) {
             const candidate = llmResult.skill_candidate;
             if (!isPatternAlreadySaved(candidate.pattern)) {
-                suggestedSkills.push({
-                    name: candidate.name,
-                    pattern: candidate.pattern,
-                    ref: candidate.ref
-                });
-            }
-        }
-        
-        // Priority 2: Heuristic Patterns (fallback)
-        constraints.forEach(c => {
-            // Only suggest if not already saved and not already suggested by LLM
-            if (!isPatternAlreadySaved(c.rule) && !suggestedSkills.some(s => s.pattern === c.rule)) {
-                if (c.type === 'boundary' || (c.type === 'explicit' && c.rule.length > 10)) {
-                    const label = c.rule.length > 20 ? c.rule.substring(0, 17) + '...' : c.rule;
-                    suggestedSkills.push({
-                        name: `Workflow optimization: "${label}"`,
-                        pattern: c.rule,
-                        ref: `/${c.rule.toLowerCase().replace(/[^a-z0-9]+/g, '-')}-skill.md`
-                    });
-                }
-            }
-        });
-
-        // Re-build plan with full context for skill tagging
-        const finalExecutionPlan = buildExecutionPlan(
-            typeKey, 
-            complexity, 
-            { constraints, contextTriggers, skillMatches }
-        );
-
-        const optimizationProfile = getOptimizationProfile(
-            constraints, 
-            complexity.riskLevel, 
-            typeKey, 
-            contextTriggers, 
-            skillMatches
-        );
-
-        let confidence = llmResult?.confidence || heuristicClassification.confidence;
-        if (contextTriggers.length > 0 || skillMatches.length > 0) confidence = Math.min(0.99, confidence + 0.1);
-
-        let reasoning = llmResult?.reasoning || '';
-        if (!reasoning) {
-            if (optimizationProfile.mode === 'agent') {
-                reasoning = "High cognitive load detected. Delegating to an agent loop reduces manual overhead by 80%.";
-                if (skillMatches.length > 0) reasoning += " Applying saved /skill workflows to optimize accuracy and reduce reasoning overhead.";
-                if (suggestedSkills.length > 0) reasoning += " Identified an operational pattern that can be converted into a deterministic workflow.";
-            } else {
-                reasoning = "Predictable task. Direct execution ensures immediate delivery while avoiding unnecessary reasoning overhead.";
+                suggestedSkills.push(candidate);
             }
         }
 
-        if (contextTriggers.length > 0 && !llmResult) {
-          reasoning += ` Identified context references that eliminate blind spots regarding existing implementation patterns.`;
+        // 5. Build Final Execution Assets
+        const finalExecutionPlan = buildExecutionPlan(typeKey, complexity, { skillMatches, constraints: mergedConstraints });
+        const optimizationProfile = getOptimizationProfile(mergedConstraints, complexity.riskLevel, typeKey, [], skillMatches);
+
+        // 6. Recommendation logic
+        let confidence = 85;
+        let reasoning = "";
+        if (optimizationProfile.mode === 'agent') {
+            reasoning = "Complex mission detected. Delegating to an agent loop reduces manual overhead by 80%.";
+            if (skillMatches.length > 0) reasoning += " Applying saved /skill workflows to optimize accuracy.";
+            if (systemLimits.length > 0) reasoning += ` Managing identified system limits: ${systemLimits.join(', ')}.`;
+        } else {
+            reasoning = "Deterministic task. Direct execution ensures immediate delivery.";
         }
 
         return {
-          id: 'pf_' + Date.now(),
-          prompt,
-          taskType: typeKey,
-          taskLabel: typeConfig.label,
-          taskIcon: typeConfig.icon, 
-          complexity,
-          constraints: constraints,
-          contextTriggers,
-          skillMatches,
-          suggestedSkills,
-          executionPlan: finalExecutionPlan,
-          optimizationProfile,
-          recommendation: {
-            mode: optimizationProfile.mode,
-            confidence,
-            reasoning
-          }
+            id: 'pf_' + Date.now(),
+            prompt,
+            mission,
+            systemLimits,
+            taskType: typeKey,
+            taskLabel: typeConfig.label,
+            taskIcon: typeConfig.icon, 
+            complexity,
+            constraints: mergedConstraints,
+            skillMatches,
+            suggestedSkills,
+            executionPlan: finalExecutionPlan,
+            optimizationProfile,
+            recommendation: {
+                mode: optimizationProfile.mode,
+                confidence,
+                reasoning
+            }
         };
     } catch (e) {
-        console.error('Critical Engine Error:', e);
-        // Absolute fallback to prevent UI hanging
+        console.error("Analysis failed:", e);
+        // Bulletproof fallback
         return {
-            id: 'error_' + Date.now(),
+            id: 'pf_err_' + Date.now(),
             prompt,
-            taskType: 'simple_qa',
-            taskLabel: 'Simple Question',
-            taskIcon: '❓',
-            complexity: { stepCount: 1, riskLevel: 'low', estimatedTokens: 1000 },
+            mission: "Execution Plan (Fallback)",
+            systemLimits: [],
+            taskType: 'code_gen',
+            taskLabel: 'Code Generation',
+            taskIcon: '⚡',
+            complexity: { riskLevel: 'low', stepCount: 3 },
             constraints: [],
-            contextTriggers: [],
             skillMatches: [],
             suggestedSkills: [],
-            executionPlan: { steps: [{ action: 'Answer', desc: 'System fallback mode.' }], totalSteps: 1 },
-            optimizationProfile: { mode: 'manual', tokens: 10, quality: 70, latency: 10, bullets: ['Fallback mode engaged'] },
-            recommendation: { mode: 'manual', confidence: 0.5, reasoning: 'Engine encountered a critical error, falling back to manual mode for safety.' }
+            executionPlan: { steps: [] },
+            optimizationProfile: { tokens: 50, quality: 50, latency: 50, bullets: ["Standard execution path"], mode: "agent" },
+            recommendation: { mode: "agent", confidence: 50, reasoning: "Error in analysis engine. Using safe defaults." }
         };
     }
   }
